@@ -15,4 +15,3 @@ class SearchQuery:
     page: int
     page_size: int
     filter_years: Optional[List[int]] = None
-    filter_type: Optional[str] = None

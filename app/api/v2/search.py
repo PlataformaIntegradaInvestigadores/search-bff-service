@@ -7,8 +7,8 @@ from app.schemas.search import (
     SearchRequest, SearchResponse, ArticleResult,
     ErrorResponse, ErrorDetail
 )
-from app.application.usecase import SemanticSearchUseCase
-from app.data.django_adapter import DjangoSearchAdapter
+from app.application.usecases.usecase import SemanticSearchUseCase
+from app.data.adapters.django_adapter import DjangoSearchAdapter
 from app.core.config import settings
 
 router = APIRouter(tags=["Search"])
@@ -37,8 +37,7 @@ async def semantic_search(request: SearchRequest):
             query=request.query,
             page=request.page,
             page_size=request.page_size,
-            filter_years=request.filters.years if request.filters else None,
-            filter_type=request.filters.type if request.filters else None
+            filter_years=request.filters.years if request.filters else None
         )
 
         years = list(set(
@@ -77,7 +76,7 @@ async def semantic_search(request: SearchRequest):
 
 @router.get("/search/filters")
 async def get_filters():
-    return {"years": list(range(2018, 2027)), "types": ["article", "review"]}
+    return {"years": list(range(2018, 2027))}
 
 
 @router.get("/health")

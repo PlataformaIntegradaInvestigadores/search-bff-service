@@ -4,7 +4,6 @@ import uuid
 
 class SearchFilters(BaseModel):
     years: Optional[List[int]] = None
-    type: Optional[str] = None
 
 class SearchRequest(BaseModel):
     query: str = Field(..., min_length=1)
