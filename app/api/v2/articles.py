@@ -16,6 +16,7 @@ from app.schemas.articles import (
     RelevantArticleItem,
     RelevantArticlesRequest,
     RelevantArticlesResponse,
+    ArticleAuthorItem,
 )
 from app.schemas.search import ErrorDetail, ErrorResponse
 
@@ -202,6 +203,19 @@ async def article_detail(scopus_id: str):
                 normalized.append(ensure_str(item))
         return normalized
 
+    def normalize_authors(values) -> List[ArticleAuthorItem] | None:
+        if values is None:
+            return None
+        normalized = []
+        for item in values:
+            if isinstance(item, dict):
+                name = ensure_str(item.get("name", ""))
+                scopus_id = ensure_str(item.get("scopusId", ""))
+                normalized.append(ArticleAuthorItem(name=name, scopusId=scopus_id if scopus_id else None))
+            else:
+                normalized.append(ArticleAuthorItem(name=ensure_str(item)))
+        return normalized
+
     if not scopus_id.strip():
         return JSONResponse(
             status_code=400,
@@ -226,7 +240,7 @@ async def article_detail(scopus_id: str):
             affiliations=normalize_list(response.get("affiliations"), "name"),
             topics=normalize_list(response.get("topics"), "name"),
             scopus_id=ensure_str(response.get("scopus_id", "")),
-            authors=normalize_list(response.get("authors"), "name"),
+            authors=normalize_authors(response.get("authors")),
         )
 
     except (httpx.ConnectError, httpx.TimeoutException) as e:

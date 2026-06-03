@@ -1,9 +1,9 @@
-import httpx
 import logging
 from typing import List
 from app.domain.entities import SearchResult, SearchQuery
 from app.domain.repositories import ISearchRepository
 from app.core.config import settings
+from app.core.http_client import http_client
 
 logger = logging.getLogger(__name__)
 
@@ -16,10 +16,9 @@ class DjangoSearchAdapter(ISearchRepository):
             "top_k": query.page_size * 3
         }
 
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(settings.V1_SEARCH_URL, json=payload)
-            response.raise_for_status()
-            data = response.json()
+        response = await http_client.post(settings.V1_SEARCH_URL, json=payload)
+        response.raise_for_status()
+        data = response.json()
 
         results = []
         for item in data.get("data", []):

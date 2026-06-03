@@ -2,17 +2,28 @@ from fastapi import FastAPI
 from fastapi import Request
 from fastapi.middleware.cors import CORSMiddleware
 import uuid
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.exceptions import RequestValidationError
+from contextlib import asynccontextmanager
 from app.api.v2 import search
 from app.api.v2 import authors
 from app.api.v2 import articles
 from app.core.exceptions import validation_exception_handler
+from app.core.http_client import http_client
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    yield
+    await http_client.aclose()
 
 app = FastAPI(
     title="Centinela Search MS",
     description="API intermediaria v2 — Strangler Pattern sobre v1",
-    version="2.0.0"
+    version="2.0.0",
+    lifespan=lifespan
 )
+
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 app.add_middleware(
     CORSMiddleware,

@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Dict, Any
 
 
 class ArticleFilters(BaseModel):
@@ -31,6 +31,11 @@ class RelevantArticlesResponse(BaseModel):
     total_results: Optional[int] = None
 
 
+class ArticleAuthorItem(BaseModel):
+    name: str
+    scopusId: Optional[str] = None
+
+
 class ArticleDetailResponse(BaseModel):
     title: str
     abstract: str
@@ -42,7 +47,7 @@ class ArticleDetailResponse(BaseModel):
     affiliations: Optional[List[str]] = None
     topics: Optional[List[str]] = None
     scopus_id: str
-    authors: Optional[List[str]] = None
+    authors: Optional[List[ArticleAuthorItem]] = None
 
 
 class ArticlesByAuthorItem(BaseModel):

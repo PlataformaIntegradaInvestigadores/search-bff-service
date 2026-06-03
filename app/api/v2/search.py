@@ -10,6 +10,14 @@ from app.schemas.search import (
 from app.application.usecases.usecase import SemanticSearchUseCase
 from app.data.adapters.django_adapter import DjangoSearchAdapter
 from app.core.config import settings
+from app.core.cache import (
+    articles_cache,
+    authors_search_cache,
+    authors_relevant_cache,
+    article_detail_cache,
+    articles_by_author_cache,
+    author_detail_cache,
+)
 
 router = APIRouter(tags=["Search"])
 logger = logging.getLogger(__name__)
@@ -97,3 +105,24 @@ async def health():
             trace_id=trace_id
         ).model_dump()
     )
+
+
+@router.get("/cache/stats")
+async def cache_stats():
+    def get_stats(cache_instance):
+        return {
+            "current_size": len(cache_instance),
+            "max_size": cache_instance.maxsize,
+            "ttl": cache_instance.ttl,
+            "hits": getattr(cache_instance, "hits", 0),
+            "misses": getattr(cache_instance, "misses", 0)
+        }
+
+    return {
+        "articles": get_stats(articles_cache),
+        "authors_search": get_stats(authors_search_cache),
+        "authors_relevant": get_stats(authors_relevant_cache),
+        "article_detail": get_stats(article_detail_cache),
+        "articles_by_author": get_stats(articles_by_author_cache),
+        "author_detail": get_stats(author_detail_cache),
+    }
