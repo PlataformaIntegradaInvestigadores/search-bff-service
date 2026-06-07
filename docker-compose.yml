@@ -1,0 +1,46 @@
+# Uso local:
+# docker compose up -d --build
+
+services:
+  search_microservice_backend:
+    build: .
+    container_name: search_microservice_backend
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    ports:
+      - "127.0.0.1:8004:8002"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      - BASE_URL=${BASE_URL:-http://host.docker.internal:8001}
+      - V1_SEARCH_URL=${V1_SEARCH_URL:-http://host.docker.internal:8001/api-se/v1/llm-search/semantic-search/}
+      - V1_AUTHORS_URL=${V1_AUTHORS_URL:-http://host.docker.internal:8001/api-se/v1/authors/authors/most_relevant_authors/}
+      - V1_AUTHORS_FIND_URL=${V1_AUTHORS_FIND_URL:-http://host.docker.internal:8001/api-se/v1/authors/authors/find_by_query/}
+      - V1_AUTHORS_DETAIL_URL=${V1_AUTHORS_DETAIL_URL:-http://host.docker.internal:8001/api-se/v1/authors/authors/}
+      - V1_ARTICLES_RELEVANT_URL=${V1_ARTICLES_RELEVANT_URL:-http://host.docker.internal:8001/api-se/v1/articles/most-relevant-articles-by-topic/}
+      - V1_ARTICLES_BY_AUTHOR_URL=${V1_ARTICLES_BY_AUTHOR_URL:-http://host.docker.internal:8001/api-se/v1/articles/find-articles-by-author-id/}
+      - V1_ARTICLES_DETAIL_URL=${V1_ARTICLES_DETAIL_URL:-http://host.docker.internal:8001/api-se/v1/articles/}
+      - DATASET_VERSION=${DATASET_VERSION:-2026-04-us8}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8002/api-se/v2/health', timeout=5)"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      centinela-net:
+        aliases:
+          - search-microservice-backend
+
+networks:
+  centinela-net:
+    external: true

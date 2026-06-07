@@ -17,6 +17,8 @@ BASE_URL=http://localhost:8001
 DATASET_VERSION=2026-04-us8
 ```
 
+Para despliegue prod-like con Docker, usar `.env_produccion.example` como plantilla. En ese modo el bridge apunta a `search-engine-backend:8001` dentro de la red Docker `centinela-net`.
+
 ## Instalación
 
 ```
@@ -32,6 +34,27 @@ uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload
 ```
 
 Base URL local: `http://localhost:8002`
+
+## Docker
+
+Desarrollo local:
+
+```
+docker network create centinela-net || true
+docker compose up -d --build
+```
+
+URL directa con Docker local: `http://localhost:8004`. Dentro de la red Docker el servicio sigue escuchando como `search-microservice-backend:8002`.
+
+Prod-like:
+
+```
+cp .env_produccion.example .env_produccion
+docker network create centinela-net || true
+docker compose --env-file .env_produccion -f docker-compose_produccion.yaml up -d --build
+```
+
+En prod-like no se publica un puerto al host. El frontend debe acceder al microservicio mediante Nginx y el alias interno `search-microservice-backend:8002`.
 
 ## Contrato (API v2)
 
