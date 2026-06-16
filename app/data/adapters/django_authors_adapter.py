@@ -99,3 +99,25 @@ class DjangoAuthorsAdapter(IAuthorRepository):
 
         author_detail_cache[cache_key] = data
         return data
+
+    # --- Fuentes adicionales para la composicion del perfil (Slice 2 / API Composition).
+    # Se derivan de BASE_URL; antes el frontend las consumia DIRECTO de v1, violando
+    # la regla TO-BE de US5 ("Angular consume solo /api-se/v2/").
+
+    async def get_coauthors(self, scopus_id: str) -> Any:
+        url = f"{settings.BASE_URL.rstrip('/')}/api-se/v1/coauthors/coauthors/{scopus_id}/coauthors_by_id/"
+        response = await http_client.get(url)
+        response.raise_for_status()
+        return response.json()
+
+    async def get_author_topics(self, scopus_id: str) -> Any:
+        url = f"{settings.BASE_URL.rstrip('/')}/api-se/v1/dashboard/author/get_topics/"
+        response = await http_client.get(url, params={"scopus_id": scopus_id})
+        response.raise_for_status()
+        return response.json()
+
+    async def get_author_years(self, scopus_id: str) -> Any:
+        url = f"{settings.BASE_URL.rstrip('/')}/api-se/v1/dashboard/author/get_author_years/"
+        response = await http_client.get(url, params={"scopus_id": scopus_id})
+        response.raise_for_status()
+        return response.json()

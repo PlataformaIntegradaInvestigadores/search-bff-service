@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import Any, List, Optional
 
 
 class AuthorsFilters(BaseModel):
@@ -70,3 +70,13 @@ class AuthorsSearchResponse(BaseModel):
     next_page: Optional[str] = None
     previous_page: Optional[str] = None
     data: List[AuthorSearchItem]
+
+
+class AuthorProfileResponse(BaseModel):
+    """Respuesta compuesta del perfil de autor (Slice 2). 'author' es el nucleo
+    tipado; el resto se pasa tal cual viene de v1 (tolerante a su forma)."""
+    author: AuthorNode
+    topics: List[Any] = []
+    coauthors: Any = None
+    years: List[Any] = []
+    articles: List[Any] = []

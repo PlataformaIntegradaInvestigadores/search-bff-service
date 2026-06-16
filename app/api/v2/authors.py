@@ -11,13 +11,16 @@ from app.schemas.authors import (
     AuthorsSearchResponse,
     AuthorSearchItem,
     AuthorNode,
+    AuthorProfileResponse,
     RelevantAuthorsResponse,
 )
 from app.schemas.search import ErrorResponse, ErrorDetail
 from app.application.usecases.relevant_authors_usecase import RelevantAuthorsUseCase
 from app.application.usecases.authors_search_usecase import AuthorsSearchUseCase
 from app.application.usecases.author_detail_usecase import AuthorDetailUseCase
+from app.application.usecases.author_profile_usecase import AuthorProfileUseCase
 from app.data.adapters.django_authors_adapter import DjangoAuthorsAdapter
+from app.data.adapters.django_articles_adapter import DjangoArticlesAdapter
 from app.api.v2._validation import validate_query
 
 router = APIRouter(tags=["Authors"])
@@ -80,6 +83,13 @@ async def execute_search(query: str, page: int, page_size: int, http_request: Re
 
 def get_detail_use_case() -> AuthorDetailUseCase:
     return AuthorDetailUseCase(repository=DjangoAuthorsAdapter())
+
+
+def get_profile_use_case() -> AuthorProfileUseCase:
+    return AuthorProfileUseCase(
+        authors_repository=DjangoAuthorsAdapter(),
+        articles_repository=DjangoArticlesAdapter(),
+    )
 
 
 @router.post("/authors/relevant", response_model=RelevantAuthorsResponse)
@@ -271,6 +281,65 @@ async def search_authors_get(query: str, page: int = 1, page_size: int = 10, htt
         )
     except Exception as e:
         logger.error(f"[{trace_id}] Authors search error: {e}")
+        return JSONResponse(
+            status_code=500,
+            content=ErrorResponse(
+                error=ErrorDetail(code="INTERNAL_ERROR", message=str(e)),
+                trace_id=trace_id
+            ).model_dump()
+        )
+
+
+@router.get("/authors/{scopus_id}/profile", response_model=AuthorProfileResponse)
+async def get_author_profile(scopus_id: str):
+    """Slice 2 (API Composition): perfil de autor compuesto en una sola respuesta.
+    v2 orquesta concurrentemente detalle + topics + coautores + anios + articulos
+    desde v1, eliminando las llamadas directas frontend -> v1."""
+    trace_id = str(uuid.uuid4())
+
+    if not scopus_id.strip():
+        return JSONResponse(
+            status_code=400,
+            content=ErrorResponse(
+                error=ErrorDetail(code="INVALID_INPUT", message="El campo 'scopus_id' es obligatorio."),
+                trace_id=trace_id
+            ).model_dump()
+        )
+
+    try:
+        use_case = get_profile_use_case()
+        result = await use_case.execute(scopus_id=scopus_id)
+        return AuthorProfileResponse(**result)
+
+    except (httpx.ConnectError, httpx.TimeoutException) as e:
+        logger.error(f"[{trace_id}] Bridge Django no disponible: {e}")
+        return JSONResponse(
+            status_code=503,
+            content=ErrorResponse(
+                error=ErrorDetail(code="DEPENDENCY_UNAVAILABLE", message="El servicio de autores no esta disponible temporalmente."),
+                trace_id=trace_id
+            ).model_dump()
+        )
+    except httpx.HTTPStatusError as e:
+        legacy_detail = ""
+        try:
+            legacy_detail = e.response.json().get("error", "")
+        except Exception:
+            legacy_detail = e.response.text
+
+        logger.error(f"[{trace_id}] Legacy author profile error: {legacy_detail}")
+        return JSONResponse(
+            status_code=503,
+            content=ErrorResponse(
+                error=ErrorDetail(
+                    code="DEPENDENCY_UNAVAILABLE",
+                    message=f"El servicio legacy de autores fallo: {legacy_detail}",
+                ),
+                trace_id=trace_id
+            ).model_dump()
+        )
+    except Exception as e:
+        logger.error(f"[{trace_id}] Author profile error: {e}")
         return JSONResponse(
             status_code=500,
             content=ErrorResponse(
