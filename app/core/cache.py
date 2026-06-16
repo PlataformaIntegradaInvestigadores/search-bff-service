@@ -45,6 +45,9 @@ articles_by_author_cache = TrackedCache(maxsize=100, ttl=1800)  # 30 min
 # Author Detail: scopus_id
 author_detail_cache = TrackedCache(maxsize=100, ttl=1800)  # 30 min
 
+# Facetas de filtros (anios dinamicos): clave estatica, TTL largo (cambian raramente)
+filters_cache = TrackedCache(maxsize=4, ttl=3600)  # 1 hora
+
 
 def make_key(*args) -> str:
     """Build a deterministic cache key from arguments."""

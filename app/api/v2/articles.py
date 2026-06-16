@@ -20,6 +20,7 @@ from app.schemas.articles import (
 )
 from app.schemas.search import ErrorDetail, ErrorResponse
 from app.api.v2._validation import validate_query
+from app.data.normalization import normalize_article_author
 
 router = APIRouter(tags=["Articles"])
 logger = logging.getLogger(__name__)
@@ -212,15 +213,8 @@ async def article_detail(scopus_id: str):
     def normalize_authors(values) -> List[ArticleAuthorItem] | None:
         if values is None:
             return None
-        normalized = []
-        for item in values:
-            if isinstance(item, dict):
-                name = ensure_str(item.get("name", ""))
-                scopus_id = ensure_str(item.get("scopusId", ""))
-                normalized.append(ArticleAuthorItem(name=name, scopusId=scopus_id if scopus_id else None))
-            else:
-                normalized.append(ArticleAuthorItem(name=ensure_str(item)))
-        return normalized
+        # ACL (Slice 3-C): v1 entrega 'scopusId'; v2 expone 'scopus_id'.
+        return [ArticleAuthorItem(**normalize_article_author(item)) for item in values]
 
     if not scopus_id.strip():
         return JSONResponse(

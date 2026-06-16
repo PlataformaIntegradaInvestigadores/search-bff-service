@@ -41,7 +41,7 @@ class AuthorLink(BaseModel):
 
 
 class AffiliationItem(BaseModel):
-    scopusId: str
+    scopus_id: str
     name: str
 
 
@@ -80,3 +80,4 @@ class AuthorProfileResponse(BaseModel):
     coauthors: Any = None
     years: List[Any] = []
     articles: List[Any] = []
+    degraded: List[str] = []

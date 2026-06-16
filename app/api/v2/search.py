@@ -11,6 +11,7 @@ from app.application.usecases.usecase import SemanticSearchUseCase
 from app.data.adapters.django_adapter import DjangoSearchAdapter
 from app.api.v2._validation import validate_query
 from app.core.config import settings
+from app.core.resilience import resilient_get
 from app.core.cache import (
     articles_cache,
     authors_search_cache,
@@ -18,6 +19,7 @@ from app.core.cache import (
     article_detail_cache,
     articles_by_author_cache,
     author_detail_cache,
+    filters_cache,
 )
 
 router = APIRouter(tags=["Search"])
@@ -91,7 +93,35 @@ async def semantic_search(request: SearchRequest):
 
 @router.get("/search/filters")
 async def get_filters():
-    return {"years": list(range(2018, 2027))}
+    # Slice 3-A: facetas de anio DINAMICAS. v2 calcula los anios realmente presentes
+    # en los datos (via v1 get_last_years) en vez de una lista estatica que ofrecia
+    # anios sin articulos (p.ej. 2018). Cacheado; con fallback estatico si v1 no
+    # responde (degradacion elegante, ver Slice 3-B).
+    cached = filters_cache.get("years")
+    if cached is not None:
+        return {"years": cached}
+
+    static_fallback = list(range(2019, 2027))
+    try:
+        url = f"{settings.BASE_URL.rstrip('/')}/api-se/v1/dashboard/country/get_last_years/"
+        response = await resilient_get(url)
+        response.raise_for_status()
+        data = response.json()
+        years = sorted({
+            int(item["year"])
+            for item in data
+            if isinstance(item, dict)
+            and item.get("year") is not None
+            and int(item.get("article", 0)) > 0
+        })
+        if not years:
+            years = static_fallback
+    except Exception as e:
+        logger.warning(f"[search/filters] no se pudieron calcular anios reales; fallback estatico: {e}")
+        years = static_fallback
+
+    filters_cache["years"] = years
+    return {"years": years}
 
 
 @router.get("/health")

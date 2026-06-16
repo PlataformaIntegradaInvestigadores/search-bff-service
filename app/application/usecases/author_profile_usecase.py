@@ -35,9 +35,12 @@ class AuthorProfileUseCase:
 
         author["scopus_id"] = str(author.get("scopus_id", ""))
 
+        degraded = []
+
         def best_effort(value, default, label):
             if isinstance(value, Exception):
                 logger.warning(f"[author_profile {scopus_id}] seccion '{label}' fallo: {value}")
+                degraded.append(label)
                 return default
             return value
 
@@ -47,4 +50,6 @@ class AuthorProfileUseCase:
             "coauthors": best_effort(coauthors, None, "coauthors"),
             "years": best_effort(years, [], "years"),
             "articles": best_effort(articles, [], "articles"),
+            # Slice 3-B: secciones que cayeron y se devolvieron vacias (degradacion elegante).
+            "degraded": degraded,
         }

@@ -8,7 +8,7 @@ from app.core.cache import (
     author_detail_cache,
     make_key,
 )
-from app.core.http_client import http_client
+from app.core.resilience import resilient_get, resilient_post
 from app.domain.author_repositories import IAuthorRepository
 
 logger = logging.getLogger(__name__)
@@ -45,7 +45,7 @@ class DjangoAuthorsAdapter(IAuthorRepository):
             if mode:
                 payload["type"] = mode
 
-        response = await http_client.post(settings.V1_AUTHORS_URL, json=payload)
+        response = await resilient_post(settings.V1_AUTHORS_URL, json=payload)
         response.raise_for_status()
         data = response.json()
 
@@ -73,7 +73,7 @@ class DjangoAuthorsAdapter(IAuthorRepository):
             "page_size": page_size,
         }
 
-        response = await http_client.get(settings.V1_AUTHORS_FIND_URL, params=params)
+        response = await resilient_get(settings.V1_AUTHORS_FIND_URL, params=params)
         response.raise_for_status()
         data = response.json()
 
@@ -93,7 +93,7 @@ class DjangoAuthorsAdapter(IAuthorRepository):
         base_url = settings.V1_AUTHORS_DETAIL_URL.rstrip("/")
         url = f"{base_url}/{scopus_id}/"
 
-        response = await http_client.get(url)
+        response = await resilient_get(url)
         response.raise_for_status()
         data = response.json()
 
@@ -106,18 +106,18 @@ class DjangoAuthorsAdapter(IAuthorRepository):
 
     async def get_coauthors(self, scopus_id: str) -> Any:
         url = f"{settings.BASE_URL.rstrip('/')}/api-se/v1/coauthors/coauthors/{scopus_id}/coauthors_by_id/"
-        response = await http_client.get(url)
+        response = await resilient_get(url)
         response.raise_for_status()
         return response.json()
 
     async def get_author_topics(self, scopus_id: str) -> Any:
         url = f"{settings.BASE_URL.rstrip('/')}/api-se/v1/dashboard/author/get_topics/"
-        response = await http_client.get(url, params={"scopus_id": scopus_id})
+        response = await resilient_get(url, params={"scopus_id": scopus_id})
         response.raise_for_status()
         return response.json()
 
     async def get_author_years(self, scopus_id: str) -> Any:
         url = f"{settings.BASE_URL.rstrip('/')}/api-se/v1/dashboard/author/get_author_years/"
-        response = await http_client.get(url, params={"scopus_id": scopus_id})
+        response = await resilient_get(url, params={"scopus_id": scopus_id})
         response.raise_for_status()
         return response.json()

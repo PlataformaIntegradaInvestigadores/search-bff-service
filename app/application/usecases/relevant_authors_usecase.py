@@ -1,6 +1,7 @@
 from typing import Any, Dict, List, Optional, Tuple
 
 from app.domain.author_repositories import IAuthorRepository
+from app.data.normalization import normalize_affiliation
 
 
 class RelevantAuthorsUseCase:
@@ -25,7 +26,8 @@ class RelevantAuthorsUseCase:
 
         nodes = response.get("nodes", [])
         links = response.get("links", [])
-        affiliations_resp = response.get("affiliations", [])
+        # ACL (Slice 3-C): traduce el camelCase 'scopusId' de v1 al canonico 'scopus_id'.
+        affiliations_resp = [normalize_affiliation(a) for a in response.get("affiliations", [])]
         total = int(response.get("size_nodes", len(nodes)))
 
         start_idx = (page - 1) * page_size
