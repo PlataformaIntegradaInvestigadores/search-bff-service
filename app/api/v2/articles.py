@@ -19,6 +19,7 @@ from app.schemas.articles import (
     ArticleAuthorItem,
 )
 from app.schemas.search import ErrorDetail, ErrorResponse
+from app.api.v2._validation import validate_query
 
 router = APIRouter(tags=["Articles"])
 logger = logging.getLogger(__name__)
@@ -49,10 +50,15 @@ async def relevant_articles(request: RelevantArticlesRequest):
             ).model_dump()
         )
 
+    # Slice 1: invariantes del agregado Consulta (HTTP 422) antes de delegar a v1.
+    search_query, contract_error = validate_query(request.query, trace_id)
+    if contract_error:
+        return contract_error
+
     try:
         use_case = get_relevant_use_case()
         response = await use_case.execute(
-            query=request.query,
+            query=search_query.value,
             page=request.page,
             page_size=request.page_size,
             years=request.filters.years if request.filters else None,

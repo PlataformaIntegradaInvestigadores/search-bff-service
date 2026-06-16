@@ -9,6 +9,7 @@ from app.schemas.search import (
 )
 from app.application.usecases.usecase import SemanticSearchUseCase
 from app.data.adapters.django_adapter import DjangoSearchAdapter
+from app.api.v2._validation import validate_query
 from app.core.config import settings
 from app.core.cache import (
     articles_cache,
@@ -39,10 +40,16 @@ async def semantic_search(request: SearchRequest):
             ).model_dump()
         )
 
+    # Slice 1: el agregado Consulta hace cumplir sus invariantes de contrato (HTTP 422)
+    # antes de delegar al bridge v1. v2 es dueno de esta validacion; v1 no la tiene.
+    search_query, contract_error = validate_query(request.query, trace_id)
+    if contract_error:
+        return contract_error
+
     try:
         use_case = get_use_case()
         results, elapsed_ms, total_count = await use_case.execute(
-            query=request.query,
+            query=search_query.value,
             page=request.page,
             page_size=request.page_size,
             filter_years=request.filters.years if request.filters else None

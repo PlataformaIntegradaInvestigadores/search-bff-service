@@ -18,6 +18,7 @@ from app.application.usecases.relevant_authors_usecase import RelevantAuthorsUse
 from app.application.usecases.authors_search_usecase import AuthorsSearchUseCase
 from app.application.usecases.author_detail_usecase import AuthorDetailUseCase
 from app.data.adapters.django_authors_adapter import DjangoAuthorsAdapter
+from app.api.v2._validation import validate_query
 
 router = APIRouter(tags=["Authors"])
 logger = logging.getLogger(__name__)
@@ -94,10 +95,15 @@ async def relevant_authors(request: AuthorsRequest):
             ).model_dump()
         )
 
+    # Slice 1: invariantes del agregado Consulta (HTTP 422) antes de delegar a v1.
+    search_query, contract_error = validate_query(request.query, trace_id)
+    if contract_error:
+        return contract_error
+
     try:
         use_case = get_use_case()
         nodes, links, affiliations, total = await use_case.execute(
-            query=request.query,
+            query=search_query.value,
             page=request.page,
             page_size=request.page_size,
             affiliations=request.filters.affiliations if request.filters else None,
@@ -164,9 +170,14 @@ async def search_authors(payload: AuthorsSearchRequest, http_request: Request):
             ).model_dump()
         )
 
+    # Slice 1: invariantes del agregado Consulta (HTTP 422) antes de delegar a v1.
+    search_query, contract_error = validate_query(payload.query, trace_id)
+    if contract_error:
+        return contract_error
+
     try:
         return await execute_search(
-            query=payload.query,
+            query=search_query.value,
             page=payload.page,
             page_size=payload.page_size,
             http_request=http_request,
