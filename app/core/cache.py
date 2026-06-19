@@ -45,6 +45,13 @@ articles_by_author_cache = TrackedCache(maxsize=100, ttl=1800)  # 30 min
 # Author Detail: scopus_id
 author_detail_cache = TrackedCache(maxsize=100, ttl=1800)  # 30 min
 
+# Subsecciones del perfil (Slice 2 / API Composition): scopus_id.
+# Mismo TTL que author_detail: son datos del mismo autor, cambian solo al reingestar.
+# Antes NO se cacheaban -> bajo concurrencia golpeaban v1 en cada perfil (cuello Suite D).
+author_coauthors_cache = TrackedCache(maxsize=100, ttl=1800)  # 30 min
+author_topics_cache = TrackedCache(maxsize=100, ttl=1800)     # 30 min
+author_years_cache = TrackedCache(maxsize=100, ttl=1800)      # 30 min
+
 # Facetas de filtros (anios dinamicos): clave estatica, TTL largo (cambian raramente)
 filters_cache = TrackedCache(maxsize=4, ttl=3600)  # 1 hora
 

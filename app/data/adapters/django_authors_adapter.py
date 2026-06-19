@@ -6,6 +6,9 @@ from app.core.cache import (
     authors_relevant_cache,
     authors_search_cache,
     author_detail_cache,
+    author_coauthors_cache,
+    author_topics_cache,
+    author_years_cache,
     make_key,
 )
 from app.core.resilience import resilient_get, resilient_post
@@ -105,19 +108,55 @@ class DjangoAuthorsAdapter(IAuthorRepository):
     # la regla TO-BE de US5 ("Angular consume solo /api-se/v2/").
 
     async def get_coauthors(self, scopus_id: str) -> Any:
+        cache_key = make_key("author_coauthors", scopus_id)
+
+        cached = author_coauthors_cache.get(cache_key)
+        if cached is not None:
+            logger.info(f"[CACHE HIT] author_coauthors | key={cache_key}")
+            return cached
+
+        logger.info(f"[CACHE MISS] author_coauthors | key={cache_key}")
+
         url = f"{settings.BASE_URL.rstrip('/')}/api-se/v1/coauthors/coauthors/{scopus_id}/coauthors_by_id/"
         response = await resilient_get(url)
         response.raise_for_status()
-        return response.json()
+        data = response.json()
+
+        author_coauthors_cache[cache_key] = data
+        return data
 
     async def get_author_topics(self, scopus_id: str) -> Any:
+        cache_key = make_key("author_topics", scopus_id)
+
+        cached = author_topics_cache.get(cache_key)
+        if cached is not None:
+            logger.info(f"[CACHE HIT] author_topics | key={cache_key}")
+            return cached
+
+        logger.info(f"[CACHE MISS] author_topics | key={cache_key}")
+
         url = f"{settings.BASE_URL.rstrip('/')}/api-se/v1/dashboard/author/get_topics/"
         response = await resilient_get(url, params={"scopus_id": scopus_id})
         response.raise_for_status()
-        return response.json()
+        data = response.json()
+
+        author_topics_cache[cache_key] = data
+        return data
 
     async def get_author_years(self, scopus_id: str) -> Any:
+        cache_key = make_key("author_years", scopus_id)
+
+        cached = author_years_cache.get(cache_key)
+        if cached is not None:
+            logger.info(f"[CACHE HIT] author_years | key={cache_key}")
+            return cached
+
+        logger.info(f"[CACHE MISS] author_years | key={cache_key}")
+
         url = f"{settings.BASE_URL.rstrip('/')}/api-se/v1/dashboard/author/get_author_years/"
         response = await resilient_get(url, params={"scopus_id": scopus_id})
         response.raise_for_status()
-        return response.json()
+        data = response.json()
+
+        author_years_cache[cache_key] = data
+        return data
