@@ -33,7 +33,7 @@ class RelevantArticlesResponse(BaseModel):
 
 class ArticleAuthorItem(BaseModel):
     name: str
-    scopusId: Optional[str] = None
+    scopus_id: Optional[str] = None
 
 
 class ArticleDetailResponse(BaseModel):

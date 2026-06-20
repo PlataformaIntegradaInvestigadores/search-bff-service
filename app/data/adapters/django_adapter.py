@@ -3,7 +3,7 @@ from typing import List
 from app.domain.entities import SearchResult, SearchQuery
 from app.domain.repositories import ISearchRepository
 from app.core.config import settings
-from app.core.http_client import http_client
+from app.core.resilience import resilient_post
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +16,7 @@ class DjangoSearchAdapter(ISearchRepository):
             "top_k": query.page_size * 3
         }
 
-        response = await http_client.post(settings.V1_SEARCH_URL, json=payload)
+        response = await resilient_post(settings.V1_SEARCH_URL, json=payload)
         response.raise_for_status()
         data = response.json()
 

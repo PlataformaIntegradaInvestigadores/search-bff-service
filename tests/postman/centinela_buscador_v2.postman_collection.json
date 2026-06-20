@@ -1,0 +1,302 @@
+{
+  "info": {
+    "name": "Centinela Buscador v2 — Suite A (Contratos)",
+    "_postman_id": "c4e1a7d2-9b3e-4a61-9d10-0f2e6a8b1c00",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Colección reproducible de los 21 casos de la Suite A (contratos del microservicio v2). Variable base_url = https://centinela.epn.edu.ec/api-se/v2. La carpeta 'Resiliencia' requiere detener v1 (docker stop search_engine_backend-search_backend-1). Postman: desactivar verificación SSL (cert self-signed)."
+  },
+  "variable": [
+    { "key": "base_url", "value": "https://centinela.epn.edu.ec/api-se/v2" },
+    { "key": "author_id", "value": "57193901649" },
+    { "key": "article_id", "value": "85199363411" }
+  ],
+  "item": [
+    {
+      "name": "1. Search & Filters",
+      "item": [
+        {
+          "name": "A-01 POST /search — query válida (200)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 200', function () { pm.response.to.have.status(200); });"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"query\":\"machine learning\",\"page\":1,\"page_size\":5}" },
+            "url": { "raw": "{{base_url}}/search", "host": ["{{base_url}}"], "path": ["search"] }
+          }
+        },
+        {
+          "name": "A-02 POST /search — query vacía (400 INVALID_INPUT)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 400', function () { pm.response.to.have.status(400); });",
+            "pm.test('error INVALID_INPUT', function () { pm.expect(pm.response.json().error.code).to.eql('INVALID_INPUT'); });"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"query\":\"\"}" },
+            "url": { "raw": "{{base_url}}/search", "host": ["{{base_url}}"], "path": ["search"] }
+          }
+        },
+        {
+          "name": "A-03 POST /search — sin sentido '###' (422 CONTRACT_VALIDATION) [Slice 1]",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 422', function () { pm.response.to.have.status(422); });",
+            "pm.test('error CONTRACT_VALIDATION', function () { pm.expect(pm.response.json().error.code).to.eql('CONTRACT_VALIDATION'); });",
+            "pm.test('incluye trace_id', function () { pm.expect(pm.response.json()).to.have.property('trace_id'); });"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"query\":\"###\"}" },
+            "url": { "raw": "{{base_url}}/search", "host": ["{{base_url}}"], "path": ["search"] }
+          }
+        },
+        {
+          "name": "A-04 GET /search/filters — facetas de año (200) [Slice 3-A]",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+            "pm.test('years es lista no vacía', function () { pm.expect(pm.response.json().years).to.be.an('array').that.is.not.empty; });",
+            "pm.test('no incluye 2018 ni 2026', function () { var y = pm.response.json().years; pm.expect(y).to.not.include(2018); pm.expect(y).to.not.include(2026); });"
+          ] } }],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/search/filters", "host": ["{{base_url}}"], "path": ["search", "filters"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Articles",
+      "item": [
+        {
+          "name": "A-05 POST /articles/relevant — válida (200)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 200', function () { pm.response.to.have.status(200); });"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"query\":\"machine learning\",\"page\":1,\"page_size\":5}" },
+            "url": { "raw": "{{base_url}}/articles/relevant", "host": ["{{base_url}}"], "path": ["articles", "relevant"] }
+          }
+        },
+        {
+          "name": "A-06 POST /articles/relevant — filtro years:[2024] (200)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 200', function () { pm.response.to.have.status(200); });"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"query\":\"machine learning\",\"page\":1,\"page_size\":5,\"years\":[2024]}" },
+            "url": { "raw": "{{base_url}}/articles/relevant", "host": ["{{base_url}}"], "path": ["articles", "relevant"] }
+          }
+        },
+        {
+          "name": "A-07 POST /articles/relevant — sin sentido '12345' (422) [Slice 1]",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 422', function () { pm.response.to.have.status(422); });",
+            "pm.test('error CONTRACT_VALIDATION', function () { pm.expect(pm.response.json().error.code).to.eql('CONTRACT_VALIDATION'); });"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"query\":\"12345\",\"page\":1,\"page_size\":5}" },
+            "url": { "raw": "{{base_url}}/articles/relevant", "host": ["{{base_url}}"], "path": ["articles", "relevant"] }
+          }
+        },
+        {
+          "name": "A-08 GET /articles/by-author (200)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 200', function () { pm.response.to.have.status(200); });"
+          ] } }],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/articles/by-author?author_id={{author_id}}", "host": ["{{base_url}}"], "path": ["articles", "by-author"], "query": [{ "key": "author_id", "value": "{{author_id}}" }] }
+          }
+        },
+        {
+          "name": "A-09 GET /articles/{id} — detalle (200, scopus_id) [Slice 3-C]",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 200', function () { pm.response.to.have.status(200); });"
+          ] } }],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/articles/{{article_id}}", "host": ["{{base_url}}"], "path": ["articles", "{{article_id}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Authors",
+      "item": [
+        {
+          "name": "A-10 POST /authors/search — válida (200)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 200', function () { pm.response.to.have.status(200); });"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"query\":\"garcia\",\"page\":1,\"page_size\":5}" },
+            "url": { "raw": "{{base_url}}/authors/search", "host": ["{{base_url}}"], "path": ["authors", "search"] }
+          }
+        },
+        {
+          "name": "A-11 GET /authors/search?query=garcia (200)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 200', function () { pm.response.to.have.status(200); });"
+          ] } }],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/authors/search?query=garcia", "host": ["{{base_url}}"], "path": ["authors", "search"], "query": [{ "key": "query", "value": "garcia" }] }
+          }
+        },
+        {
+          "name": "A-12 POST /authors/search — sin sentido '###' (422) [Slice 1]",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 422', function () { pm.response.to.have.status(422); });",
+            "pm.test('error CONTRACT_VALIDATION', function () { pm.expect(pm.response.json().error.code).to.eql('CONTRACT_VALIDATION'); });"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"query\":\"###\",\"page\":1,\"page_size\":5}" },
+            "url": { "raw": "{{base_url}}/authors/search", "host": ["{{base_url}}"], "path": ["authors", "search"] }
+          }
+        },
+        {
+          "name": "A-13 POST /authors/relevant — válida (200, scopus_id) [Slice 3-C]",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+            "pm.test('afiliaciones usan scopus_id (no scopusId)', function () { var t = pm.response.text(); pm.expect(t).to.not.include('scopusId'); });"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"query\":\"machine learning\",\"page\":1,\"page_size\":5}" },
+            "url": { "raw": "{{base_url}}/authors/relevant", "host": ["{{base_url}}"], "path": ["authors", "relevant"] }
+          }
+        },
+        {
+          "name": "A-14 POST /authors/relevant — sin sentido 'a' (422) [Slice 1]",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 422', function () { pm.response.to.have.status(422); });"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"query\":\"a\",\"page\":1,\"page_size\":5}" },
+            "url": { "raw": "{{base_url}}/authors/relevant", "host": ["{{base_url}}"], "path": ["authors", "relevant"] }
+          }
+        },
+        {
+          "name": "A-15 GET /authors/{id} — detalle (200)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 200', function () { pm.response.to.have.status(200); });"
+          ] } }],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/authors/{{author_id}}", "host": ["{{base_url}}"], "path": ["authors", "{{author_id}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Author Profile — Composición [Slice 2]",
+      "item": [
+        {
+          "name": "A-16 GET /authors/{id}/profile — 5 secciones (200)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+            "var j = pm.response.json();",
+            "pm.test('incluye las 5 secciones', function () { ['author','topics','coauthors','years','articles'].forEach(function (k) { pm.expect(j).to.have.property(k); }); });",
+            "pm.test('degraded vacío (todo respondió)', function () { pm.expect(j.degraded).to.be.an('array').that.is.empty; });"
+          ] } }],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/authors/{{author_id}}/profile", "host": ["{{base_url}}"], "path": ["authors", "{{author_id}}", "profile"] }
+          }
+        },
+        {
+          "name": "A-17 GET /authors/{id}/profile — autor inexistente (503 controlado)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 503 (no crash)', function () { pm.response.to.have.status(503); });"
+          ] } }],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/authors/0000000000/profile", "host": ["{{base_url}}"], "path": ["authors", "0000000000", "profile"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Infra",
+      "item": [
+        {
+          "name": "A-18 GET /health (200, healthy)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+            "pm.test('estado healthy', function () { pm.expect(pm.response.json().status).to.eql('healthy'); });"
+          ] } }],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/health", "host": ["{{base_url}}"], "path": ["health"] }
+          }
+        },
+        {
+          "name": "A-19 GET /cache/stats (200)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 200', function () { pm.response.to.have.status(200); });"
+          ] } }],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/cache/stats", "host": ["{{base_url}}"], "path": ["cache", "stats"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Resiliencia — REQUIERE v1 caído [Slice 3-B]",
+      "description": "Precondición: docker stop search_engine_backend-search_backend-1. Para A-21, consultar antes el perfil para cachear su núcleo, luego detener v1.",
+      "item": [
+        {
+          "name": "A-20 POST /articles/relevant con v1 caído (503 DEPENDENCY_UNAVAILABLE)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 503', function () { pm.response.to.have.status(503); });",
+            "pm.test('error DEPENDENCY_UNAVAILABLE', function () { pm.expect(pm.response.json().error.code).to.eql('DEPENDENCY_UNAVAILABLE'); });"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"query\":\"tema nuevo sin cache\",\"page\":1,\"page_size\":5}" },
+            "url": { "raw": "{{base_url}}/articles/relevant", "host": ["{{base_url}}"], "path": ["articles", "relevant"] }
+          }
+        },
+        {
+          "name": "A-21 GET perfil con v1 caído (200 + degraded poblado)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('status 200 (parcial)', function () { pm.response.to.have.status(200); });",
+            "pm.test('degraded incluye secciones no cacheadas', function () { var d = pm.response.json().degraded; pm.expect(d).to.include.members(['topics','coauthors','years']); });"
+          ] } }],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/authors/{{author_id}}/profile", "host": ["{{base_url}}"], "path": ["authors", "{{author_id}}", "profile"] }
+          }
+        }
+      ]
+    }
+  ]
+}

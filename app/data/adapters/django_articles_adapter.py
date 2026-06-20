@@ -8,7 +8,7 @@ from app.core.cache import (
     article_detail_cache,
     make_key,
 )
-from app.core.http_client import http_client
+from app.core.resilience import resilient_get, resilient_post
 from app.domain.article_repositories import IArticleRepository
 
 logger = logging.getLogger(__name__)
@@ -43,7 +43,7 @@ class DjangoArticlesAdapter(IArticleRepository):
         if years:
             payload["years"] = [str(year) for year in years]
 
-        response = await http_client.post(settings.V1_ARTICLES_RELEVANT_URL, json=payload)
+        response = await resilient_post(settings.V1_ARTICLES_RELEVANT_URL, json=payload)
         response.raise_for_status()
         data = response.json()
 
@@ -62,7 +62,7 @@ class DjangoArticlesAdapter(IArticleRepository):
 
         params = {"author_id": author_id}
 
-        response = await http_client.get(settings.V1_ARTICLES_BY_AUTHOR_URL, params=params)
+        response = await resilient_get(settings.V1_ARTICLES_BY_AUTHOR_URL, params=params)
         response.raise_for_status()
         data = response.json()
 
@@ -81,7 +81,7 @@ class DjangoArticlesAdapter(IArticleRepository):
 
         url = f"{settings.V1_ARTICLES_DETAIL_URL}{scopus_id}/"
 
-        response = await http_client.get(url)
+        response = await resilient_get(url)
         response.raise_for_status()
         data = response.json()
 
