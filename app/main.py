@@ -10,6 +10,7 @@ from app.api.v2 import authors
 from app.api.v2 import articles
 from app.core.exceptions import validation_exception_handler
 from app.core.http_client import http_client
+from app.schemas.search import ERROR_RESPONSES
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -44,7 +45,7 @@ async def trace_id_middleware(request: Request, call_next):
     response.headers["X-Trace-ID"] = trace_id
     return response
 
-app.include_router(search.router, prefix="/api-se/v2")
-app.include_router(authors.router, prefix="/api-se/v2")
-app.include_router(articles.router, prefix="/api-se/v2")
+app.include_router(search.router, prefix="/api-se/v2", responses=ERROR_RESPONSES)
+app.include_router(authors.router, prefix="/api-se/v2", responses=ERROR_RESPONSES)
+app.include_router(articles.router, prefix="/api-se/v2", responses=ERROR_RESPONSES)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)

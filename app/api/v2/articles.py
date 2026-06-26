@@ -69,8 +69,8 @@ async def relevant_articles(request: RelevantArticlesRequest):
         items = [
             RelevantArticleItem(
                 title=item.get("title", ""),
-                author_count=int(item.get("author_count", 0)),
-                affiliation_count=int(item.get("affiliation_count", 0)),
+                author_count=int(item.get("author_count") or 0),
+                affiliation_count=int(item.get("affiliation_count") or 0),
                 publication_date=item.get("publication_date", ""),
                 scopus_id=str(item.get("scopus_id", "")),
                 relevance=float(item.get("relevance", 0.0)),
@@ -192,7 +192,8 @@ async def articles_by_author(author_id: str):
         )
 
 
-@router.get("/articles/{scopus_id}", response_model=ArticleDetailResponse)
+@router.get("/articles/{scopus_id}", response_model=ArticleDetailResponse,
+            responses={404: {"model": ErrorResponse, "description": "Articulo no encontrado"}})
 async def article_detail(scopus_id: str):
     trace_id = str(uuid.uuid4())
 
@@ -229,13 +230,26 @@ async def article_detail(scopus_id: str):
         use_case = get_detail_use_case()
         response = await use_case.execute(scopus_id=scopus_id)
 
+        # Articulo inexistente: v1 devuelve una estructura vacia o con campos nulos.
+        # Se responde 404 controlado en vez de intentar componer el detalle, lo que
+        # provocaba un 500 por int(None) al convertir contadores nulos. Hallado al
+        # fuzzear la API con EvoMaster (GET /articles/{id} con id inexistente -> 500).
+        if not response or not (response.get("scopus_id") or response.get("title")):
+            return JSONResponse(
+                status_code=404,
+                content=ErrorResponse(
+                    error=ErrorDetail(code="NOT_FOUND", message="No se encontro un articulo con ese scopus_id."),
+                    trace_id=trace_id
+                ).model_dump()
+            )
+
         return ArticleDetailResponse(
             title=ensure_str(response.get("title", "")),
             abstract=ensure_str(response.get("abstract", "")),
             doi=ensure_str(response.get("doi", "")),
             publication_date=ensure_str(response.get("publication_date", "")),
-            author_count=int(response.get("author_count", 0)),
-            affiliation_count=int(response.get("affiliation_count", 0)),
+            author_count=int(response.get("author_count") or 0),
+            affiliation_count=int(response.get("affiliation_count") or 0),
             corpus=ensure_str(response.get("corpus")) if response.get("corpus") is not None else None,
             affiliations=normalize_list(response.get("affiliations"), "name"),
             topics=normalize_list(response.get("topics"), "name"),
