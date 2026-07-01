@@ -34,3 +34,14 @@ class ErrorDetail(BaseModel):
 class ErrorResponse(BaseModel):
     error: ErrorDetail
     trace_id: str
+
+
+# Respuestas de error del contrato OpenAPI: validacion 422 (Slice 1), peticion
+# invalida 400 y resiliencia 503 (Slice 3-B). Se declaran a nivel de router para
+# completar el contrato; estos estados quedaban sin documentar (hallado al fuzzear
+# la API con EvoMaster: "estado de respuesta no declarado").
+ERROR_RESPONSES = {
+    400: {"model": ErrorResponse, "description": "Peticion invalida"},
+    422: {"model": ErrorResponse, "description": "Validacion de contrato fallida"},
+    503: {"model": ErrorResponse, "description": "Dependencia (v1) no disponible"},
+}
