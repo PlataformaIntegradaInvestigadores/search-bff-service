@@ -41,6 +41,7 @@ class DjangoArticlesAdapter(IArticleRepository):
         }
 
         if years:
+            payload["type"] = "include"
             payload["years"] = [str(year) for year in years]
 
         response = await resilient_post(settings.V1_ARTICLES_RELEVANT_URL, json=payload)
