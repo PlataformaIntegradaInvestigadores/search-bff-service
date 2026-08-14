@@ -2,11 +2,24 @@ name: CI — search_microservice_backend
 
 on:
   push:
-    branches: [main]
+    branches: [develop, main]
   pull_request:
-    branches: [main]
+    branches: [develop, main]
 
 jobs:
+  branch-name:
+    name: Validar nombre de rama
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Verificar prefijo (feature/*, hotfix/*, chore/*)
+        run: |
+          BRANCH="${{ github.head_ref }}"
+          case "$BRANCH" in
+            feature/*|hotfix/*|chore/*) echo "OK: $BRANCH"; exit 0 ;;
+            *) echo "Rama '$BRANCH' no cumple convención (feature/*, hotfix/*, chore/*)"; exit 1 ;;
+          esac
+
   # ── Tests ──────────────────────────────────────────────────────────────────
   test:
     name: Pruebas unitarias
