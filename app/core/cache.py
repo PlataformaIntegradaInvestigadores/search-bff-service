@@ -6,10 +6,13 @@ Uses TTLCache from cachetools:
 - maxsize limits the number of cached entries (LRU eviction)
 - Cache resets on process restart (container rebuild)
 """
+
 import logging
+
 from cachetools import TTLCache
 
 logger = logging.getLogger(__name__)
+
 
 class TrackedCache(TTLCache):
     def __init__(self, *args, **kwargs):
@@ -24,6 +27,7 @@ class TrackedCache(TTLCache):
         else:
             self.misses += 1
             return default
+
 
 # --- Cache Instances ---
 
@@ -47,10 +51,11 @@ author_detail_cache = TrackedCache(maxsize=100, ttl=1800)  # 30 min
 
 # Subsecciones del perfil (Slice 2 / API Composition): scopus_id.
 # Mismo TTL que author_detail: son datos del mismo autor, cambian solo al reingestar.
-# Antes NO se cacheaban -> bajo concurrencia golpeaban v1 en cada perfil (cuello Suite D).
+# Antes NO se cacheaban -> bajo concurrencia golpeaban v1 en cada perfil
+# (cuello Suite D).
 author_coauthors_cache = TrackedCache(maxsize=100, ttl=1800)  # 30 min
-author_topics_cache = TrackedCache(maxsize=100, ttl=1800)     # 30 min
-author_years_cache = TrackedCache(maxsize=100, ttl=1800)      # 30 min
+author_topics_cache = TrackedCache(maxsize=100, ttl=1800)  # 30 min
+author_years_cache = TrackedCache(maxsize=100, ttl=1800)  # 30 min
 
 # Facetas de filtros (anios dinamicos): clave estatica, TTL largo (cambian raramente)
 filters_cache = TrackedCache(maxsize=4, ttl=3600)  # 1 hora

@@ -1,27 +1,28 @@
-import uuid
 import logging
-import httpx
+import uuid
 from urllib.parse import urlencode
+
+import httpx
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
+from app.api.v2._validation import validate_query
+from app.application.usecases.author_detail_usecase import AuthorDetailUseCase
+from app.application.usecases.author_profile_usecase import AuthorProfileUseCase
+from app.application.usecases.authors_search_usecase import AuthorsSearchUseCase
+from app.application.usecases.relevant_authors_usecase import RelevantAuthorsUseCase
+from app.data.adapters.django_articles_adapter import DjangoArticlesAdapter
+from app.data.adapters.django_authors_adapter import DjangoAuthorsAdapter
 from app.schemas.authors import (
+    AuthorNode,
+    AuthorProfileResponse,
+    AuthorSearchItem,
     AuthorsRequest,
     AuthorsSearchRequest,
     AuthorsSearchResponse,
-    AuthorSearchItem,
-    AuthorNode,
-    AuthorProfileResponse,
     RelevantAuthorsResponse,
 )
-from app.schemas.search import ErrorResponse, ErrorDetail
-from app.application.usecases.relevant_authors_usecase import RelevantAuthorsUseCase
-from app.application.usecases.authors_search_usecase import AuthorsSearchUseCase
-from app.application.usecases.author_detail_usecase import AuthorDetailUseCase
-from app.application.usecases.author_profile_usecase import AuthorProfileUseCase
-from app.data.adapters.django_authors_adapter import DjangoAuthorsAdapter
-from app.data.adapters.django_articles_adapter import DjangoArticlesAdapter
-from app.api.v2._validation import validate_query
+from app.schemas.search import ErrorDetail, ErrorResponse
 
 router = APIRouter(tags=["Authors"])
 logger = logging.getLogger(__name__)
@@ -42,7 +43,9 @@ def build_page_url(http_request: Request, query: str, page: int, page_size: int)
     return f"{base_url}{next_path}?{params}"
 
 
-async def execute_search(query: str, page: int, page_size: int, http_request: Request) -> AuthorsSearchResponse:
+async def execute_search(
+    query: str, page: int, page_size: int, http_request: Request
+) -> AuthorsSearchResponse:
     use_case = get_search_use_case()
     response = await use_case.execute(
         query=query,
@@ -100,9 +103,12 @@ async def relevant_authors(request: AuthorsRequest):
         return JSONResponse(
             status_code=400,
             content=ErrorResponse(
-                error=ErrorDetail(code="INVALID_INPUT", message="El campo 'query' es obligatorio y no puede estar vacio."),
-                trace_id=trace_id
-            ).model_dump()
+                error=ErrorDetail(
+                    code="INVALID_INPUT",
+                    message="El campo 'query' es obligatorio y no puede estar vacio.",
+                ),
+                trace_id=trace_id,
+            ).model_dump(),
         )
 
     # Slice 1: invariantes del agregado Consulta (HTTP 422) antes de delegar a v1.
@@ -134,9 +140,12 @@ async def relevant_authors(request: AuthorsRequest):
         return JSONResponse(
             status_code=503,
             content=ErrorResponse(
-                error=ErrorDetail(code="DEPENDENCY_UNAVAILABLE", message="El servicio de autores no esta disponible temporalmente."),
-                trace_id=trace_id
-            ).model_dump()
+                error=ErrorDetail(
+                    code="DEPENDENCY_UNAVAILABLE",
+                    message="El servicio de autores no esta disponible temporalmente.",
+                ),
+                trace_id=trace_id,
+            ).model_dump(),
         )
     except httpx.HTTPStatusError as e:
         legacy_detail = ""
@@ -153,8 +162,8 @@ async def relevant_authors(request: AuthorsRequest):
                     code="DEPENDENCY_UNAVAILABLE",
                     message=f"El servicio legacy de autores fallo: {legacy_detail}",
                 ),
-                trace_id=trace_id
-            ).model_dump()
+                trace_id=trace_id,
+            ).model_dump(),
         )
     except Exception as e:
         logger.error(f"[{trace_id}] Relevant authors error: {e}")
@@ -162,8 +171,8 @@ async def relevant_authors(request: AuthorsRequest):
             status_code=500,
             content=ErrorResponse(
                 error=ErrorDetail(code="INTERNAL_ERROR", message=str(e)),
-                trace_id=trace_id
-            ).model_dump()
+                trace_id=trace_id,
+            ).model_dump(),
         )
 
 
@@ -175,9 +184,12 @@ async def search_authors(payload: AuthorsSearchRequest, http_request: Request):
         return JSONResponse(
             status_code=400,
             content=ErrorResponse(
-                error=ErrorDetail(code="INVALID_INPUT", message="El campo 'query' es obligatorio y no puede estar vacio."),
-                trace_id=trace_id
-            ).model_dump()
+                error=ErrorDetail(
+                    code="INVALID_INPUT",
+                    message="El campo 'query' es obligatorio y no puede estar vacio.",
+                ),
+                trace_id=trace_id,
+            ).model_dump(),
         )
 
     # Slice 1: invariantes del agregado Consulta (HTTP 422) antes de delegar a v1.
@@ -198,9 +210,12 @@ async def search_authors(payload: AuthorsSearchRequest, http_request: Request):
         return JSONResponse(
             status_code=503,
             content=ErrorResponse(
-                error=ErrorDetail(code="DEPENDENCY_UNAVAILABLE", message="El servicio de autores no esta disponible temporalmente."),
-                trace_id=trace_id
-            ).model_dump()
+                error=ErrorDetail(
+                    code="DEPENDENCY_UNAVAILABLE",
+                    message="El servicio de autores no esta disponible temporalmente.",
+                ),
+                trace_id=trace_id,
+            ).model_dump(),
         )
     except httpx.HTTPStatusError as e:
         legacy_detail = ""
@@ -217,8 +232,8 @@ async def search_authors(payload: AuthorsSearchRequest, http_request: Request):
                     code="DEPENDENCY_UNAVAILABLE",
                     message=f"El servicio legacy de autores fallo: {legacy_detail}",
                 ),
-                trace_id=trace_id
-            ).model_dump()
+                trace_id=trace_id,
+            ).model_dump(),
         )
     except Exception as e:
         logger.error(f"[{trace_id}] Authors search error: {e}")
@@ -226,22 +241,27 @@ async def search_authors(payload: AuthorsSearchRequest, http_request: Request):
             status_code=500,
             content=ErrorResponse(
                 error=ErrorDetail(code="INTERNAL_ERROR", message=str(e)),
-                trace_id=trace_id
-            ).model_dump()
+                trace_id=trace_id,
+            ).model_dump(),
         )
 
 
 @router.get("/authors/search", response_model=AuthorsSearchResponse)
-async def search_authors_get(query: str, page: int = 1, page_size: int = 10, http_request: Request = None):
+async def search_authors_get(
+    query: str, page: int = 1, page_size: int = 10, http_request: Request = None
+):
     trace_id = str(uuid.uuid4())
 
     if not query or not query.strip():
         return JSONResponse(
             status_code=400,
             content=ErrorResponse(
-                error=ErrorDetail(code="INVALID_INPUT", message="El campo 'query' es obligatorio y no puede estar vacio."),
-                trace_id=trace_id
-            ).model_dump()
+                error=ErrorDetail(
+                    code="INVALID_INPUT",
+                    message="El campo 'query' es obligatorio y no puede estar vacio.",
+                ),
+                trace_id=trace_id,
+            ).model_dump(),
         )
 
     try:
@@ -257,9 +277,12 @@ async def search_authors_get(query: str, page: int = 1, page_size: int = 10, htt
         return JSONResponse(
             status_code=503,
             content=ErrorResponse(
-                error=ErrorDetail(code="DEPENDENCY_UNAVAILABLE", message="El servicio de autores no esta disponible temporalmente."),
-                trace_id=trace_id
-            ).model_dump()
+                error=ErrorDetail(
+                    code="DEPENDENCY_UNAVAILABLE",
+                    message="El servicio de autores no esta disponible temporalmente.",
+                ),
+                trace_id=trace_id,
+            ).model_dump(),
         )
     except httpx.HTTPStatusError as e:
         legacy_detail = ""
@@ -276,8 +299,8 @@ async def search_authors_get(query: str, page: int = 1, page_size: int = 10, htt
                     code="DEPENDENCY_UNAVAILABLE",
                     message=f"El servicio legacy de autores fallo: {legacy_detail}",
                 ),
-                trace_id=trace_id
-            ).model_dump()
+                trace_id=trace_id,
+            ).model_dump(),
         )
     except Exception as e:
         logger.error(f"[{trace_id}] Authors search error: {e}")
@@ -285,8 +308,8 @@ async def search_authors_get(query: str, page: int = 1, page_size: int = 10, htt
             status_code=500,
             content=ErrorResponse(
                 error=ErrorDetail(code="INTERNAL_ERROR", message=str(e)),
-                trace_id=trace_id
-            ).model_dump()
+                trace_id=trace_id,
+            ).model_dump(),
         )
 
 
@@ -301,9 +324,11 @@ async def get_author_profile(scopus_id: str):
         return JSONResponse(
             status_code=400,
             content=ErrorResponse(
-                error=ErrorDetail(code="INVALID_INPUT", message="El campo 'scopus_id' es obligatorio."),
-                trace_id=trace_id
-            ).model_dump()
+                error=ErrorDetail(
+                    code="INVALID_INPUT", message="El campo 'scopus_id' es obligatorio."
+                ),
+                trace_id=trace_id,
+            ).model_dump(),
         )
 
     try:
@@ -316,9 +341,12 @@ async def get_author_profile(scopus_id: str):
         return JSONResponse(
             status_code=503,
             content=ErrorResponse(
-                error=ErrorDetail(code="DEPENDENCY_UNAVAILABLE", message="El servicio de autores no esta disponible temporalmente."),
-                trace_id=trace_id
-            ).model_dump()
+                error=ErrorDetail(
+                    code="DEPENDENCY_UNAVAILABLE",
+                    message="El servicio de autores no esta disponible temporalmente.",
+                ),
+                trace_id=trace_id,
+            ).model_dump(),
         )
     except httpx.HTTPStatusError as e:
         legacy_detail = ""
@@ -335,8 +363,8 @@ async def get_author_profile(scopus_id: str):
                     code="DEPENDENCY_UNAVAILABLE",
                     message=f"El servicio legacy de autores fallo: {legacy_detail}",
                 ),
-                trace_id=trace_id
-            ).model_dump()
+                trace_id=trace_id,
+            ).model_dump(),
         )
     except Exception as e:
         logger.error(f"[{trace_id}] Author profile error: {e}")
@@ -344,8 +372,8 @@ async def get_author_profile(scopus_id: str):
             status_code=500,
             content=ErrorResponse(
                 error=ErrorDetail(code="INTERNAL_ERROR", message=str(e)),
-                trace_id=trace_id
-            ).model_dump()
+                trace_id=trace_id,
+            ).model_dump(),
         )
 
 
@@ -357,9 +385,11 @@ async def get_author(scopus_id: str):
         return JSONResponse(
             status_code=400,
             content=ErrorResponse(
-                error=ErrorDetail(code="INVALID_INPUT", message="El campo 'scopus_id' es obligatorio."),
-                trace_id=trace_id
-            ).model_dump()
+                error=ErrorDetail(
+                    code="INVALID_INPUT", message="El campo 'scopus_id' es obligatorio."
+                ),
+                trace_id=trace_id,
+            ).model_dump(),
         )
 
     try:
@@ -373,9 +403,12 @@ async def get_author(scopus_id: str):
         return JSONResponse(
             status_code=503,
             content=ErrorResponse(
-                error=ErrorDetail(code="DEPENDENCY_UNAVAILABLE", message="El servicio de autores no esta disponible temporalmente."),
-                trace_id=trace_id
-            ).model_dump()
+                error=ErrorDetail(
+                    code="DEPENDENCY_UNAVAILABLE",
+                    message="El servicio de autores no esta disponible temporalmente.",
+                ),
+                trace_id=trace_id,
+            ).model_dump(),
         )
     except httpx.HTTPStatusError as e:
         legacy_detail = ""
@@ -392,8 +425,8 @@ async def get_author(scopus_id: str):
                     code="DEPENDENCY_UNAVAILABLE",
                     message=f"El servicio legacy de autores fallo: {legacy_detail}",
                 ),
-                trace_id=trace_id
-            ).model_dump()
+                trace_id=trace_id,
+            ).model_dump(),
         )
     except Exception as e:
         logger.error(f"[{trace_id}] Author detail error: {e}")
@@ -401,6 +434,6 @@ async def get_author(scopus_id: str):
             status_code=500,
             content=ErrorResponse(
                 error=ErrorDetail(code="INTERNAL_ERROR", message=str(e)),
-                trace_id=trace_id
-            ).model_dump()
+                trace_id=trace_id,
+            ).model_dump(),
         )

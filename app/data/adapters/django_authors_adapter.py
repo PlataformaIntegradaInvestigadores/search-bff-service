@@ -1,16 +1,16 @@
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from app.core.config import settings
 from app.core.cache import (
-    authors_relevant_cache,
-    authors_search_cache,
-    author_detail_cache,
     author_coauthors_cache,
+    author_detail_cache,
     author_topics_cache,
     author_years_cache,
+    authors_relevant_cache,
+    authors_search_cache,
     make_key,
 )
+from app.core.config import settings
 from app.core.resilience import resilient_get, resilient_post
 from app.domain.author_repositories import IAuthorRepository
 
@@ -24,12 +24,14 @@ class DjangoAuthorsAdapter(IAuthorRepository):
         self,
         query: str,
         authors_number: int,
-        affiliations: Optional[List[str]] = None,
-        mode: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        affiliations: list[str] | None = None,
+        mode: str | None = None,
+    ) -> dict[str, Any]:
         aff_key = str(sorted(affiliations)) if affiliations else "none"
         mode_key = mode or "none"
-        cache_key = make_key("authors_relevant", query, authors_number, aff_key, mode_key)
+        cache_key = make_key(
+            "authors_relevant", query, authors_number, aff_key, mode_key
+        )
 
         cached = authors_relevant_cache.get(cache_key)
         if cached is not None:
@@ -38,7 +40,7 @@ class DjangoAuthorsAdapter(IAuthorRepository):
 
         logger.info(f"[CACHE MISS] authors_relevant | key={cache_key}")
 
-        payload: Dict[str, Any] = {
+        payload: dict[str, Any] = {
             "topic": query,
             "authors_number": authors_number,
         }
@@ -60,7 +62,7 @@ class DjangoAuthorsAdapter(IAuthorRepository):
         query: str,
         page: int,
         page_size: int,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         cache_key = make_key("authors_search", query, page, page_size)
 
         cached = authors_search_cache.get(cache_key)
@@ -83,7 +85,7 @@ class DjangoAuthorsAdapter(IAuthorRepository):
         authors_search_cache[cache_key] = data
         return data
 
-    async def get_author_by_id(self, scopus_id: str) -> Dict[str, Any]:
+    async def get_author_by_id(self, scopus_id: str) -> dict[str, Any]:
         cache_key = make_key("author_detail", scopus_id)
 
         cached = author_detail_cache.get(cache_key)
@@ -103,7 +105,8 @@ class DjangoAuthorsAdapter(IAuthorRepository):
         author_detail_cache[cache_key] = data
         return data
 
-    # --- Fuentes adicionales para la composicion del perfil (Slice 2 / API Composition).
+    # --- Fuentes adicionales para la composicion del perfil
+    # (Slice 2 / API Composition).
     # Se derivan de BASE_URL; antes el frontend las consumia DIRECTO de v1, violando
     # la regla TO-BE de US5 ("Angular consume solo /api-se/v2/").
 
@@ -117,7 +120,8 @@ class DjangoAuthorsAdapter(IAuthorRepository):
 
         logger.info(f"[CACHE MISS] author_coauthors | key={cache_key}")
 
-        url = f"{settings.BASE_URL.rstrip('/')}/api-se/v1/coauthors/coauthors/{scopus_id}/coauthors_by_id/"
+        base = settings.BASE_URL.rstrip("/")
+        url = f"{base}/api-se/v1/coauthors/coauthors/{scopus_id}/coauthors_by_id/"
         response = await resilient_get(url)
         response.raise_for_status()
         data = response.json()
@@ -153,7 +157,8 @@ class DjangoAuthorsAdapter(IAuthorRepository):
 
         logger.info(f"[CACHE MISS] author_years | key={cache_key}")
 
-        url = f"{settings.BASE_URL.rstrip('/')}/api-se/v1/dashboard/author/get_author_years/"
+        base = settings.BASE_URL.rstrip("/")
+        url = f"{base}/api-se/v1/dashboard/author/get_author_years/"
         response = await resilient_get(url, params={"scopus_id": scopus_id})
         response.raise_for_status()
         data = response.json()

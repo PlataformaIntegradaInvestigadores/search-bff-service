@@ -1,8 +1,9 @@
 from abc import ABC, abstractmethod
-from typing import List
-from app.domain.entities import SearchResult, SearchQuery
+
+from app.domain.entities import SearchQuery, SearchResult
+
 
 class ISearchRepository(ABC):
     @abstractmethod
-    async def search(self, query: SearchQuery) -> List[SearchResult]:
+    async def search(self, query: SearchQuery) -> list[SearchResult]:
         pass

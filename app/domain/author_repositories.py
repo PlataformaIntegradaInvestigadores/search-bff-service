@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 class IAuthorRepository(ABC):
@@ -8,9 +8,9 @@ class IAuthorRepository(ABC):
         self,
         query: str,
         authors_number: int,
-        affiliations: Optional[List[str]] = None,
-        mode: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        affiliations: list[str] | None = None,
+        mode: str | None = None,
+    ) -> dict[str, Any]:
         pass
 
     @abstractmethod
@@ -19,9 +19,9 @@ class IAuthorRepository(ABC):
         query: str,
         page: int,
         page_size: int,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         pass
 
     @abstractmethod
-    async def get_author_by_id(self, scopus_id: str) -> Dict[str, Any]:
+    async def get_author_by_id(self, scopus_id: str) -> dict[str, Any]:
         pass

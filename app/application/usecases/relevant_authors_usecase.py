@@ -1,7 +1,7 @@
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
-from app.domain.author_repositories import IAuthorRepository
 from app.data.normalization import normalize_affiliation
+from app.domain.author_repositories import IAuthorRepository
 
 
 class RelevantAuthorsUseCase:
@@ -13,9 +13,9 @@ class RelevantAuthorsUseCase:
         query: str,
         page: int,
         page_size: int,
-        affiliations: Optional[List[str]] = None,
-        mode: Optional[str] = None,
-    ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]], List[Dict[str, Any]], int]:
+        affiliations: list[str] | None = None,
+        mode: str | None = None,
+    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]], int]:
         authors_number = max(page * page_size, page_size)
         response = await self.repository.most_relevant_authors(
             query=query,
@@ -26,8 +26,11 @@ class RelevantAuthorsUseCase:
 
         nodes = response.get("nodes", [])
         links = response.get("links", [])
-        # ACL (Slice 3-C): traduce el camelCase 'scopusId' de v1 al canonico 'scopus_id'.
-        affiliations_resp = [normalize_affiliation(a) for a in response.get("affiliations", [])]
+        # ACL (Slice 3-C): traduce el camelCase 'scopusId' de v1 al
+        # canonico 'scopus_id'.
+        affiliations_resp = [
+            normalize_affiliation(a) for a in response.get("affiliations", [])
+        ]
         total = int(response.get("size_nodes", len(nodes)))
 
         start_idx = (page - 1) * page_size
@@ -36,7 +39,8 @@ class RelevantAuthorsUseCase:
 
         node_ids = {str(node.get("scopus_id")) for node in paginated_nodes}
         filtered_links = [
-            link for link in links
+            link
+            for link in links
             if str(link.get("source")) in node_ids
             and str(link.get("target")) in node_ids
         ]

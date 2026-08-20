@@ -1,16 +1,15 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional, Union, Dict, Any
 
 
 class ArticleFilters(BaseModel):
-    years: Optional[List[int]] = None
+    years: list[int] | None = None
 
 
 class RelevantArticlesRequest(BaseModel):
     query: str = Field(..., min_length=1)
     page: int = Field(default=1, ge=1)
     page_size: int = Field(default=10, ge=1, le=100)
-    filters: Optional[ArticleFilters] = None
+    filters: ArticleFilters | None = None
 
 
 class RelevantArticleItem(BaseModel):
@@ -20,20 +19,20 @@ class RelevantArticleItem(BaseModel):
     publication_date: str
     scopus_id: str
     relevance: float
-    authors: Optional[List[str]] = None
-    affiliations: Optional[List[str]] = None
+    authors: list[str] | None = None
+    affiliations: list[str] | None = None
 
 
 class RelevantArticlesResponse(BaseModel):
-    data: List[RelevantArticleItem]
-    years: List[Union[int, str]] = []
+    data: list[RelevantArticleItem]
+    years: list[int | str] = []
     total: int
-    total_results: Optional[int] = None
+    total_results: int | None = None
 
 
 class ArticleAuthorItem(BaseModel):
     name: str
-    scopus_id: Optional[str] = None
+    scopus_id: str | None = None
 
 
 class ArticleDetailResponse(BaseModel):
@@ -43,11 +42,11 @@ class ArticleDetailResponse(BaseModel):
     publication_date: str
     author_count: int
     affiliation_count: int
-    corpus: Optional[str] = None
-    affiliations: Optional[List[str]] = None
-    topics: Optional[List[str]] = None
+    corpus: str | None = None
+    affiliations: list[str] | None = None
+    topics: list[str] | None = None
     scopus_id: str
-    authors: Optional[List[ArticleAuthorItem]] = None
+    authors: list[ArticleAuthorItem] | None = None
 
 
 class ArticlesByAuthorItem(BaseModel):
