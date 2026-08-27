@@ -56,6 +56,6 @@ class TestComposicion:
 
     def test_fallo_del_nucleo_propaga_error(self):
         authors = _authors_ok()
-        authors.get_author_by_id.side_effect = Exception("author not found")
-        with pytest.raises(Exception):
+        authors.get_author_by_id.side_effect = RuntimeError("author not found")
+        with pytest.raises(RuntimeError):
             asyncio.run(_build(authors, _articles_ok()).execute("1"))
