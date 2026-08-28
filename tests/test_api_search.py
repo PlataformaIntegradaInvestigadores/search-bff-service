@@ -113,7 +113,7 @@ class TestHealth:
                 return mock_resp
 
         with patch("app.api.v2.search.httpx.AsyncClient", return_value=_FakeClient()):
-            r = client.get("/api-se/v2/health")
+            r = client.get("/health")
         assert r.status_code == 200
         assert r.json()["status"] == "healthy"
 
@@ -129,7 +129,7 @@ class TestHealth:
                 raise httpx.ConnectError("down")
 
         with patch("app.api.v2.search.httpx.AsyncClient", return_value=_FakeClient()):
-            r = client.get("/api-se/v2/health")
+            r = client.get("/health")
         assert r.status_code == 503
 
 

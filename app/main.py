@@ -48,6 +48,7 @@ async def trace_id_middleware(request: Request, call_next):
     return response
 
 
+app.include_router(search.health_router)
 app.include_router(search.router, prefix="/api-se/v2", responses=ERROR_RESPONSES)
 app.include_router(authors.router, prefix="/api-se/v2", responses=ERROR_RESPONSES)
 app.include_router(articles.router, prefix="/api-se/v2", responses=ERROR_RESPONSES)

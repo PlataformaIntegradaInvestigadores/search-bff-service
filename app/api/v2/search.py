@@ -28,6 +28,7 @@ from app.schemas.search import (
 )
 
 router = APIRouter(tags=["Search"])
+health_router = APIRouter(tags=["Health"])
 logger = logging.getLogger(__name__)
 
 
@@ -141,7 +142,7 @@ async def get_filters():
     return {"years": years}
 
 
-@router.get("/health")
+@health_router.get("/health")
 async def health():
     trace_id = str(uuid.uuid4())
     try:

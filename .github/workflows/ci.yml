@@ -73,7 +73,7 @@ jobs:
           sleep 15
           HEALTHY=false
           for i in 1 2 3 4 5; do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 http://localhost:8004/api-se/v2/health || echo "000")
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 http://localhost:8004/health || echo "000")
             echo "Intento $i: HTTP $STATUS"
             if [ "$STATUS" = "200" ]; then
               HEALTHY=true; break
