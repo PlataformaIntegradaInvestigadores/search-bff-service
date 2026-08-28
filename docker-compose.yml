@@ -2,9 +2,9 @@
 # docker compose up -d --build
 
 services:
-  search_microservice_backend:
+  search-bff-service:
     build: .
-    container_name: search_microservice_backend
+    container_name: search-bff-service
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
@@ -39,7 +39,7 @@ services:
     networks:
       centinela-net:
         aliases:
-          - search-microservice-backend
+          - search-bff-service
 
 networks:
   centinela-net:

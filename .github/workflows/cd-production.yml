@@ -46,7 +46,7 @@ jobs:
       - name: Reconstruir contenedor
         run: |
           cd /opt/centinela
-          docker compose up -d --build search-microservice-backend
+          docker compose up -d --build search-bff-service
 
       - name: Health check con rollback automático
         run: |
@@ -63,7 +63,7 @@ jobs:
           if [ "$HEALTHY" = "false" ]; then
             echo "Health check fallido — rollback al commit anterior"
             cd /opt/centinela/search_microservice_backend && git reset --hard HEAD~1
-            cd /opt/centinela && docker compose up -d --build search-microservice-backend
+            cd /opt/centinela && docker compose up -d --build search-bff-service
             exit 1
           fi
           echo "Deploy exitoso — search_microservice_backend en producción"

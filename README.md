@@ -1,14 +1,14 @@
-# Centinela — search_microservice_backend
+# Centinela — search-bff-service
 
-Microservicio FastAPI que actúa como bridge entre el frontend y `search_engine_backend` (API v1, Django/Neo4j/MongoDB), exponiendo un contrato v2 estable, con caché y resiliencia ante caídas del backend de origen.
+Microservicio FastAPI que actúa como bridge entre el frontend y `search-service` (API v1, Django/Neo4j/MongoDB), exponiendo un contrato v2 estable, con caché y resiliencia ante caídas del backend de origen.
 
-Parte del org multi-repo `PlataformaIntegradaInvestigadores`. No tiene base de datos propia — todo el estado real vive en `search_engine_backend`, al que llama por HTTP. En producción se accede a través de `api-gateway` (Nginx); en Docker local se expone en el host mediante el puerto 8004.
+Parte del org multi-repo `PlataformaIntegradaInvestigadores`. No tiene base de datos propia — todo el estado real vive en `search-service`, al que llama por HTTP. En producción se accede a través de `gateway-service` (Nginx); en Docker local se expone en el host mediante el puerto 8004.
 
 ## Stack
 
 - FastAPI 0.111 + Uvicorn (ASGI)
 - Pydantic 2 / pydantic-settings (config por env vars)
-- httpx (cliente HTTP hacia `search_engine_backend`)
+- httpx (cliente HTTP hacia `search-service`)
 - cachetools (caché en memoria de resultados)
 
 ## Estructura del proyecto
@@ -38,7 +38,7 @@ tests/               # pytest, un archivo por endpoint/usecase/adapter
 docker network create centinela-net || true
 docker compose up -d --build
 ```
-Queda accesible en `http://localhost:8004`. Dentro de la red Docker se resuelve como `search-microservice-backend:8002`.
+Queda accesible en `http://localhost:8004`. Dentro de la red Docker se resuelve como `search-bff-service:8002`.
 
 Para un entorno prod-like:
 ```bash
@@ -46,7 +46,7 @@ cp .env_produccion.example .env_produccion
 docker network create centinela-net || true
 docker compose --env-file .env_produccion -f docker-compose_produccion.yaml up -d --build
 ```
-En este modo no se publica puerto al host — el acceso es solo vía Nginx/`api-gateway`.
+En este modo no se publica puerto al host — el acceso es solo vía Nginx/`gateway-service`.
 
 ### Sin Docker (desarrollo)
 ```bash
@@ -63,7 +63,7 @@ Ver `.env.example` (desarrollo) o `.env_produccion.example` (Docker prod-like). 
 
 | Variable | Descripción |
 |---|---|
-| `BASE_URL` | URL base de `search_engine_backend` (v1) |
+| `BASE_URL` | URL base de `search-service` (v1) |
 | `V1_SEARCH_URL` | Endpoint v1 de búsqueda semántica (`llm-search`) |
 | `V1_AUTHORS_URL` / `V1_AUTHORS_FIND_URL` / `V1_AUTHORS_DETAIL_URL` | Endpoints v1 de autores usados por los adapters |
 | `V1_ARTICLES_RELEVANT_URL` / `V1_ARTICLES_BY_AUTHOR_URL` / `V1_ARTICLES_DETAIL_URL` | Endpoints v1 de artículos |
