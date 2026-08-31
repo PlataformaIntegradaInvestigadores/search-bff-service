@@ -77,6 +77,10 @@ pytest tests/ -v --cov=app --cov-report=term
 
 Cobertura mínima exigida en CI: **90%** (`--cov-fail-under=90` en `.github/workflows/ci.yml`). Estado actual: 96%, 122 tests.
 
+## Documentación (Swagger)
+
+Schema OpenAPI (autogenerado por FastAPI): `GET /openapi.json`. UI local propia en `/docs`. Centralizado también en el hub del `gateway-service`: `/api/docs/v1/search-bff`. `custom_openapi()` en `app/main.py` recorta el prefijo interno `/api-se/v2` y declara `servers: [{"url": "/api/search/v2"}]` para que "Try it out" funcione a través del gateway.
+
 ## API (v2)
 
 Prefijo: `/api-se/v2`
