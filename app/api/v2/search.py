@@ -142,7 +142,7 @@ async def get_filters():
     return {"years": years}
 
 
-@health_router.get("/health")
+@health_router.get("/health", include_in_schema=False)
 async def health():
     trace_id = str(uuid.uuid4())
     try:

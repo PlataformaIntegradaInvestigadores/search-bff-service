@@ -133,6 +133,18 @@ class TestHealth:
         assert r.status_code == 503
 
 
+class TestOpenAPI:
+    def test_schema_uses_gateway_prefix(self):
+        r = client.get("/openapi.json")
+        assert r.status_code == 200
+        schema = r.json()
+        assert schema["servers"] == [
+            {"url": "/api/search/v2", "description": "Gateway"}
+        ]
+        assert "/health" not in schema["paths"]
+        assert all(not path.startswith("/api-se/v2") for path in schema["paths"])
+
+
 class TestCacheStats:
     def test_devuelve_las_seis_caches(self):
         r = client.get("/api-se/v2/cache/stats")

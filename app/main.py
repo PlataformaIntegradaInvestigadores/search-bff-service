@@ -5,6 +5,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.openapi.utils import get_openapi
 
 from app.api.v2 import articles, authors, search
 from app.core.exceptions import validation_exception_handler
@@ -53,3 +54,23 @@ app.include_router(search.router, prefix="/api-se/v2", responses=ERROR_RESPONSES
 app.include_router(authors.router, prefix="/api-se/v2", responses=ERROR_RESPONSES)
 app.include_router(articles.router, prefix="/api-se/v2", responses=ERROR_RESPONSES)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
+
+
+def custom_openapi():
+    """Recorta el prefijo interno del spec y fija la ruta publica detras del
+    gateway (nginx.conf: /api/search/v2/ -> /api-se/v2/), para que "Try it out"
+    en Swagger UI pegue a la URL real."""
+    if app.openapi_schema:
+        return app.openapi_schema
+    schema = get_openapi(title=app.title, version=app.version, routes=app.routes)
+    prefix = "/api-se/v2"
+    schema["paths"] = {
+        (path[len(prefix) :] if path.startswith(prefix) else path): item
+        for path, item in schema.get("paths", {}).items()
+    }
+    schema["servers"] = [{"url": "/api/search/v2", "description": "Gateway"}]
+    app.openapi_schema = schema
+    return app.openapi_schema
+
+
+app.openapi = custom_openapi
