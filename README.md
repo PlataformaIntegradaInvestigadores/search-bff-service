@@ -67,7 +67,6 @@ Ver `.env.example` (desarrollo) o `.env_produccion.example` (Docker prod-like). 
 | `V1_SEARCH_URL` | Endpoint v1 de búsqueda semántica (`llm-search`) |
 | `V1_AUTHORS_URL` / `V1_AUTHORS_FIND_URL` / `V1_AUTHORS_DETAIL_URL` | Endpoints v1 de autores usados por los adapters |
 | `V1_ARTICLES_RELEVANT_URL` / `V1_ARTICLES_BY_AUTHOR_URL` / `V1_ARTICLES_DETAIL_URL` | Endpoints v1 de artículos |
-| `DATASET_VERSION` | Etiqueta de versión de dataset expuesta en `/health` |
 
 ## Tests
 

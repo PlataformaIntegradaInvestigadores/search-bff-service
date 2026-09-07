@@ -18,7 +18,6 @@ class Settings(BaseSettings):
     )
     V1_ARTICLES_DETAIL_URL: str = "http://localhost:8001/api-se/v1/articles/"
     BASE_URL: str = "http://localhost:8001"
-    DATASET_VERSION: str = "2026-04-us8"
 
     class Config:
         env_file = ".env"
