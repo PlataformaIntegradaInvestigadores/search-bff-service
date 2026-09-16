@@ -1,4 +1,5 @@
 import logging
+import socket
 import uuid
 
 import httpx
@@ -142,28 +143,41 @@ async def get_filters():
     return {"years": years}
 
 
+def _local_ip() -> str:
+    try:
+        return socket.gethostbyname(socket.gethostname())
+    except OSError:
+        return "unknown"
+
+
 @health_router.get("/health", include_in_schema=False)
 async def health():
-    trace_id = str(uuid.uuid4())
+    upstream_ok = False
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
             response = await client.get(
                 settings.BASE_URL + "/api-se/v1/llm-search/semantic-search/"
             )
-            if response.status_code < 500:
-                return {"status": "healthy", "version": "2.0.0"}
+            upstream_ok = response.status_code < 500
     except (httpx.ConnectError, httpx.TimeoutException):
         pass
 
-    return JSONResponse(
-        status_code=503,
-        content=ErrorResponse(
-            error=ErrorDetail(
-                code="DEPENDENCY_UNAVAILABLE", message="El bridge Django no responde."
-            ),
-            trace_id=trace_id,
-        ).model_dump(),
-    )
+    service_status = "ok" if upstream_ok else "error"
+    payload = {
+        "server_name": "search-bff-service",
+        "ip_address": _local_ip(),
+        "global_status": "Online" if upstream_ok else "Offline",
+        "groups": [
+            {
+                "group_name": "Upstream",
+                "group_status": "Operativo" if upstream_ok else "Caído",
+                "services": [{"name": "search-service", "status": service_status}],
+            }
+        ],
+    }
+    if upstream_ok:
+        return payload
+    return JSONResponse(status_code=503, content=payload)
 
 
 @router.get("/cache/stats")

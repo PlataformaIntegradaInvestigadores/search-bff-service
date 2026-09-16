@@ -115,7 +115,12 @@ class TestHealth:
         with patch("app.api.v2.search.httpx.AsyncClient", return_value=_FakeClient()):
             r = client.get("/health")
         assert r.status_code == 200
-        assert r.json()["status"] == "healthy"
+        body = r.json()
+        assert body["global_status"] == "Online"
+        assert body["groups"][0]["services"][0] == {
+            "name": "search-service",
+            "status": "ok",
+        }
 
     def test_v1_no_responde_retorna_503(self):
         class _FakeClient:
