@@ -118,7 +118,7 @@ class TestHealth:
         body = r.json()
         assert body["global_status"] == "Online"
         assert body["groups"][0]["services"][0] == {
-            "name": "search-service",
+            "name": "search-engine-api",
             "status": "ok",
         }
 

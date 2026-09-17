@@ -169,9 +169,9 @@ async def health():
         "global_status": "Online" if upstream_ok else "Offline",
         "groups": [
             {
-                "group_name": "Upstream",
+                "group_name": "Search BFF",
                 "group_status": "Operativo" if upstream_ok else "Caído",
-                "services": [{"name": "search-service", "status": service_status}],
+                "services": [{"name": "search-engine-api", "status": service_status}],
             }
         ],
     }
