@@ -1,26 +1,25 @@
 import logging
 import uuid
-from typing import List
 
 import httpx
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
-from app.application.usecases.relevant_articles_usecase import RelevantArticlesUseCase
+from app.api.v2._validation import validate_query
 from app.application.usecases.article_detail_usecase import ArticleDetailUseCase
 from app.application.usecases.articles_by_author_usecase import ArticlesByAuthorUseCase
+from app.application.usecases.relevant_articles_usecase import RelevantArticlesUseCase
 from app.data.adapters.django_articles_adapter import DjangoArticlesAdapter
+from app.data.normalization import normalize_article_author
 from app.schemas.articles import (
+    ArticleAuthorItem,
     ArticleDetailResponse,
     ArticlesByAuthorItem,
     RelevantArticleItem,
     RelevantArticlesRequest,
     RelevantArticlesResponse,
-    ArticleAuthorItem,
 )
 from app.schemas.search import ErrorDetail, ErrorResponse
-from app.api.v2._validation import validate_query
-from app.data.normalization import normalize_article_author
 
 router = APIRouter(tags=["Articles"])
 logger = logging.getLogger(__name__)
@@ -46,9 +45,12 @@ async def relevant_articles(request: RelevantArticlesRequest):
         return JSONResponse(
             status_code=400,
             content=ErrorResponse(
-                error=ErrorDetail(code="INVALID_INPUT", message="El campo 'query' es obligatorio y no puede estar vacio."),
-                trace_id=trace_id
-            ).model_dump()
+                error=ErrorDetail(
+                    code="INVALID_INPUT",
+                    message="El campo 'query' es obligatorio y no puede estar vacio.",
+                ),
+                trace_id=trace_id,
+            ).model_dump(),
         )
 
     # Slice 1: invariantes del agregado Consulta (HTTP 422) antes de delegar a v1.
@@ -95,9 +97,14 @@ async def relevant_articles(request: RelevantArticlesRequest):
         return JSONResponse(
             status_code=503,
             content=ErrorResponse(
-                error=ErrorDetail(code="DEPENDENCY_UNAVAILABLE", message="El servicio de articulos no esta disponible temporalmente."),
-                trace_id=trace_id
-            ).model_dump()
+                error=ErrorDetail(
+                    code="DEPENDENCY_UNAVAILABLE",
+                    message=(
+                        "El servicio de articulos no esta disponible temporalmente."
+                    ),
+                ),
+                trace_id=trace_id,
+            ).model_dump(),
         )
     except httpx.HTTPStatusError as e:
         legacy_detail = ""
@@ -114,8 +121,8 @@ async def relevant_articles(request: RelevantArticlesRequest):
                     code="DEPENDENCY_UNAVAILABLE",
                     message=f"El servicio legacy de articulos fallo: {legacy_detail}",
                 ),
-                trace_id=trace_id
-            ).model_dump()
+                trace_id=trace_id,
+            ).model_dump(),
         )
     except Exception as e:
         logger.error(f"[{trace_id}] Relevant articles error: {e}")
@@ -123,12 +130,12 @@ async def relevant_articles(request: RelevantArticlesRequest):
             status_code=500,
             content=ErrorResponse(
                 error=ErrorDetail(code="INTERNAL_ERROR", message=str(e)),
-                trace_id=trace_id
-            ).model_dump()
+                trace_id=trace_id,
+            ).model_dump(),
         )
 
 
-@router.get("/articles/by-author", response_model=List[ArticlesByAuthorItem])
+@router.get("/articles/by-author", response_model=list[ArticlesByAuthorItem])
 async def articles_by_author(author_id: str):
     trace_id = str(uuid.uuid4())
 
@@ -136,9 +143,12 @@ async def articles_by_author(author_id: str):
         return JSONResponse(
             status_code=400,
             content=ErrorResponse(
-                error=ErrorDetail(code="INVALID_INPUT", message="El parametro 'author_id' es obligatorio."),
-                trace_id=trace_id
-            ).model_dump()
+                error=ErrorDetail(
+                    code="INVALID_INPUT",
+                    message="El parametro 'author_id' es obligatorio.",
+                ),
+                trace_id=trace_id,
+            ).model_dump(),
         )
 
     try:
@@ -159,9 +169,14 @@ async def articles_by_author(author_id: str):
         return JSONResponse(
             status_code=503,
             content=ErrorResponse(
-                error=ErrorDetail(code="DEPENDENCY_UNAVAILABLE", message="El servicio de articulos no esta disponible temporalmente."),
-                trace_id=trace_id
-            ).model_dump()
+                error=ErrorDetail(
+                    code="DEPENDENCY_UNAVAILABLE",
+                    message=(
+                        "El servicio de articulos no esta disponible temporalmente."
+                    ),
+                ),
+                trace_id=trace_id,
+            ).model_dump(),
         )
     except httpx.HTTPStatusError as e:
         legacy_detail = ""
@@ -178,8 +193,8 @@ async def articles_by_author(author_id: str):
                     code="DEPENDENCY_UNAVAILABLE",
                     message=f"El servicio legacy de articulos fallo: {legacy_detail}",
                 ),
-                trace_id=trace_id
-            ).model_dump()
+                trace_id=trace_id,
+            ).model_dump(),
         )
     except Exception as e:
         logger.error(f"[{trace_id}] Articles by author error: {e}")
@@ -187,20 +202,23 @@ async def articles_by_author(author_id: str):
             status_code=500,
             content=ErrorResponse(
                 error=ErrorDetail(code="INTERNAL_ERROR", message=str(e)),
-                trace_id=trace_id
-            ).model_dump()
+                trace_id=trace_id,
+            ).model_dump(),
         )
 
 
-@router.get("/articles/{scopus_id}", response_model=ArticleDetailResponse,
-            responses={404: {"model": ErrorResponse, "description": "Articulo no encontrado"}})
+@router.get(
+    "/articles/{scopus_id}",
+    response_model=ArticleDetailResponse,
+    responses={404: {"model": ErrorResponse, "description": "Articulo no encontrado"}},
+)
 async def article_detail(scopus_id: str):
     trace_id = str(uuid.uuid4())
 
     def ensure_str(value) -> str:
         return "" if value is None else str(value)
 
-    def normalize_list(values, key: str) -> List[str] | None:
+    def normalize_list(values, key: str) -> list[str] | None:
         if values is None:
             return None
         normalized = []
@@ -211,7 +229,7 @@ async def article_detail(scopus_id: str):
                 normalized.append(ensure_str(item))
         return normalized
 
-    def normalize_authors(values) -> List[ArticleAuthorItem] | None:
+    def normalize_authors(values) -> list[ArticleAuthorItem] | None:
         if values is None:
             return None
         # ACL (Slice 3-C): v1 entrega 'scopusId'; v2 expone 'scopus_id'.
@@ -221,9 +239,11 @@ async def article_detail(scopus_id: str):
         return JSONResponse(
             status_code=400,
             content=ErrorResponse(
-                error=ErrorDetail(code="INVALID_INPUT", message="El campo 'scopus_id' es obligatorio."),
-                trace_id=trace_id
-            ).model_dump()
+                error=ErrorDetail(
+                    code="INVALID_INPUT", message="El campo 'scopus_id' es obligatorio."
+                ),
+                trace_id=trace_id,
+            ).model_dump(),
         )
 
     try:
@@ -238,9 +258,12 @@ async def article_detail(scopus_id: str):
             return JSONResponse(
                 status_code=404,
                 content=ErrorResponse(
-                    error=ErrorDetail(code="NOT_FOUND", message="No se encontro un articulo con ese scopus_id."),
-                    trace_id=trace_id
-                ).model_dump()
+                    error=ErrorDetail(
+                        code="NOT_FOUND",
+                        message="No se encontro un articulo con ese scopus_id.",
+                    ),
+                    trace_id=trace_id,
+                ).model_dump(),
             )
 
         return ArticleDetailResponse(
@@ -250,7 +273,11 @@ async def article_detail(scopus_id: str):
             publication_date=ensure_str(response.get("publication_date", "")),
             author_count=int(response.get("author_count") or 0),
             affiliation_count=int(response.get("affiliation_count") or 0),
-            corpus=ensure_str(response.get("corpus")) if response.get("corpus") is not None else None,
+            corpus=(
+                ensure_str(response.get("corpus"))
+                if response.get("corpus") is not None
+                else None
+            ),
             affiliations=normalize_list(response.get("affiliations"), "name"),
             topics=normalize_list(response.get("topics"), "name"),
             scopus_id=ensure_str(response.get("scopus_id", "")),
@@ -262,9 +289,14 @@ async def article_detail(scopus_id: str):
         return JSONResponse(
             status_code=503,
             content=ErrorResponse(
-                error=ErrorDetail(code="DEPENDENCY_UNAVAILABLE", message="El servicio de articulos no esta disponible temporalmente."),
-                trace_id=trace_id
-            ).model_dump()
+                error=ErrorDetail(
+                    code="DEPENDENCY_UNAVAILABLE",
+                    message=(
+                        "El servicio de articulos no esta disponible temporalmente."
+                    ),
+                ),
+                trace_id=trace_id,
+            ).model_dump(),
         )
     except httpx.HTTPStatusError as e:
         legacy_detail = ""
@@ -281,8 +313,8 @@ async def article_detail(scopus_id: str):
                     code="DEPENDENCY_UNAVAILABLE",
                     message=f"El servicio legacy de articulos fallo: {legacy_detail}",
                 ),
-                trace_id=trace_id
-            ).model_dump()
+                trace_id=trace_id,
+            ).model_dump(),
         )
     except Exception as e:
         logger.error(f"[{trace_id}] Article detail error: {e}")
@@ -290,6 +322,6 @@ async def article_detail(scopus_id: str):
             status_code=500,
             content=ErrorResponse(
                 error=ErrorDetail(code="INTERNAL_ERROR", message=str(e)),
-                trace_id=trace_id
-            ).model_dump()
+                trace_id=trace_id,
+            ).model_dump(),
         )

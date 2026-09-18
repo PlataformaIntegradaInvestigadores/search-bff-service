@@ -3,9 +3,10 @@
 Mantiene el dominio puro (value_objects no conoce FastAPI) y evita repetir el
 bloque de validacion en cada endpoint que recibe una consulta de busqueda.
 """
+
 from fastapi.responses import JSONResponse
 
-from app.domain.value_objects import SearchQuery, ContractValidationError
+from app.domain.value_objects import ContractValidationError, SearchQuery
 from app.schemas.search import ErrorDetail, ErrorResponse
 
 
@@ -21,7 +22,9 @@ def validate_query(raw, trace_id):
         error = JSONResponse(
             status_code=422,
             content=ErrorResponse(
-                error=ErrorDetail(code="CONTRACT_VALIDATION", message=e.message, details=e.details),
+                error=ErrorDetail(
+                    code="CONTRACT_VALIDATION", message=e.message, details=e.details
+                ),
                 trace_id=trace_id,
             ).model_dump(),
         )

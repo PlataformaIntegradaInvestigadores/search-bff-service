@@ -5,6 +5,7 @@ del backend legacy. Estas envolturas reintentan las llamadas a v1 ante fallos
 transitorios (conexion, timeout, 502/503/504) con backoff acotado antes de
 propagar el error. Es una capacidad que ni v1 ni el frontend proveen hoy.
 """
+
 import asyncio
 import logging
 
@@ -46,8 +47,8 @@ async def _request(method, url, **kwargs):
             last_exc = exc
             if attempt < _MAX_ATTEMPTS:
                 logger.warning(
-                    f"[resilience] {method} {url} fallo transitorio ({type(exc).__name__}); "
-                    f"reintento {attempt}/{_MAX_ATTEMPTS - 1}"
+                    f"[resilience] {method} {url} fallo transitorio "
+                    f"({type(exc).__name__}); reintento {attempt}/{_MAX_ATTEMPTS - 1}"
                 )
                 await asyncio.sleep(_BASE_BACKOFF * attempt)
                 continue

@@ -1,7 +1,8 @@
 """Suite C — Unitarias del agregado Consulta (Slice 1: validacion de contrato)."""
+
 import pytest
 
-from app.domain.value_objects import SearchQuery, ContractValidationError
+from app.domain.value_objects import ContractValidationError, SearchQuery
 
 
 class TestSearchQueryValida:

@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from app.domain.article_repositories import IArticleRepository
 
@@ -12,8 +12,8 @@ class RelevantArticlesUseCase:
         query: str,
         page: int,
         page_size: int,
-        years: Optional[List[int]] = None,
-    ) -> Dict[str, Any]:
+        years: list[int] | None = None,
+    ) -> dict[str, Any]:
         return await self.repository.most_relevant_articles(
             query=query,
             page=page,

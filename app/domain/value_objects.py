@@ -10,11 +10,13 @@ Nota de alcance: la validacion es un guard heuristico de la capa intermediaria,
 no comprension semantica via NLP/ML (ese modelo vive en v1 y no es parte de
 este componente).
 """
+
 import re
 
 
 class ContractValidationError(Exception):
-    """La consulta esta bien formada pero viola una regla de negocio/contrato (HTTP 422)."""
+    """La consulta esta bien formada pero viola una regla de negocio/contrato
+    (HTTP 422)."""
 
     def __init__(self, message, details=None):
         self.message = message
@@ -34,7 +36,7 @@ class SearchQuery:
     MAX_LENGTH = 256
     MIN_TOKEN_LENGTH = 2
     # Una corrida de >=2 letras (unicode); excluye digitos, simbolos y guion bajo.
-    _MEANINGFUL_TOKEN = re.compile(r"[^\W\d_]{%d,}" % MIN_TOKEN_LENGTH, re.UNICODE)
+    _MEANINGFUL_TOKEN = re.compile(rf"[^\W\d_]{{{MIN_TOKEN_LENGTH},}}", re.UNICODE)
 
     def __init__(self, raw):
         normalized = " ".join((raw or "").split())
@@ -42,12 +44,15 @@ class SearchQuery:
         if len(normalized) > self.MAX_LENGTH:
             raise ContractValidationError(
                 f"La consulta excede el maximo de {self.MAX_LENGTH} caracteres.",
-                details=[{"field": "query", "rule": "max_length", "limit": self.MAX_LENGTH}],
+                details=[
+                    {"field": "query", "rule": "max_length", "limit": self.MAX_LENGTH}
+                ],
             )
 
         if not self._MEANINGFUL_TOKEN.search(normalized):
             raise ContractValidationError(
-                "La consulta no contiene terminos con sentido para una busqueda semantica.",
+                "La consulta no contiene terminos con sentido para una "
+                "busqueda semantica.",
                 details=[{"field": "query", "rule": "meaningful_terms"}],
             )
 

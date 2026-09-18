@@ -1,4 +1,5 @@
 """Suite C — Unitarias del ACL (Slice 3-C: normalizacion scopusId -> scopus_id)."""
+
 from app.data.normalization import normalize_affiliation, normalize_article_author
 
 

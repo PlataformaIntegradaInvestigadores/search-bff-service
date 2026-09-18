@@ -3,6 +3,7 @@
 Mockea los repositorios (Neo4j/Mongo/Elsevier via v1) para probar la orquestacion
 en aislamiento.
 """
+
 import asyncio
 from unittest.mock import AsyncMock
 
@@ -12,7 +13,9 @@ from app.application.usecases.author_profile_usecase import AuthorProfileUseCase
 
 
 def _build(authors, articles):
-    return AuthorProfileUseCase(authors_repository=authors, articles_repository=articles)
+    return AuthorProfileUseCase(
+        authors_repository=authors, articles_repository=articles
+    )
 
 
 def _authors_ok():
@@ -53,6 +56,6 @@ class TestComposicion:
 
     def test_fallo_del_nucleo_propaga_error(self):
         authors = _authors_ok()
-        authors.get_author_by_id.side_effect = Exception("author not found")
-        with pytest.raises(Exception):
+        authors.get_author_by_id.side_effect = RuntimeError("author not found")
+        with pytest.raises(RuntimeError):
             asyncio.run(_build(authors, _articles_ok()).execute("1"))

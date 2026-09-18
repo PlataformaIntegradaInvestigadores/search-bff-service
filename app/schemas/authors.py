@@ -1,17 +1,18 @@
+from typing import Any
+
 from pydantic import BaseModel, Field
-from typing import Any, List, Optional
 
 
 class AuthorsFilters(BaseModel):
-    affiliations: Optional[List[str]] = None
-    mode: Optional[str] = None
+    affiliations: list[str] | None = None
+    mode: str | None = None
 
 
 class AuthorsRequest(BaseModel):
     query: str = Field(..., min_length=1)
     page: int = Field(default=1, ge=1)
     page_size: int = Field(default=10, ge=1, le=200)
-    filters: Optional[AuthorsFilters] = None
+    filters: AuthorsFilters | None = None
 
 
 class AuthorsSearchRequest(BaseModel):
@@ -26,12 +27,12 @@ class AuthorNode(BaseModel):
     last_name: str
     auth_name: str
     initials: str
-    affiliations: List[str] = []
+    affiliations: list[str] = []
     articles: int = 0
-    co_authors: List[str] = []
-    topics: List[str] = []
+    co_authors: list[str] = []
+    topics: list[str] = []
     citation_count: int = 0
-    current_affiliation: Optional[str] = None
+    current_affiliation: str | None = None
 
 
 class AuthorLink(BaseModel):
@@ -46,9 +47,9 @@ class AffiliationItem(BaseModel):
 
 
 class RelevantAuthorsResponse(BaseModel):
-    nodes: List[AuthorNode]
-    links: List[AuthorLink]
-    affiliations: List[AffiliationItem]
+    nodes: list[AuthorNode]
+    links: list[AuthorLink]
+    affiliations: list[AffiliationItem]
     total_results: int
     page: int
     page_size: int
@@ -60,24 +61,25 @@ class AuthorSearchItem(BaseModel):
     affiliations: int
     articles: int
     topics: int
-    current_affiliation: Optional[str] = None
+    current_affiliation: str | None = None
     citation_count: int
     updated: bool
 
 
 class AuthorsSearchResponse(BaseModel):
     total: int
-    next_page: Optional[str] = None
-    previous_page: Optional[str] = None
-    data: List[AuthorSearchItem]
+    next_page: str | None = None
+    previous_page: str | None = None
+    data: list[AuthorSearchItem]
 
 
 class AuthorProfileResponse(BaseModel):
     """Respuesta compuesta del perfil de autor (Slice 2). 'author' es el nucleo
     tipado; el resto se pasa tal cual viene de v1 (tolerante a su forma)."""
+
     author: AuthorNode
-    topics: List[Any] = []
+    topics: list[Any] = []
     coauthors: Any = None
-    years: List[Any] = []
-    articles: List[Any] = []
-    degraded: List[str] = []
+    years: list[Any] = []
+    articles: list[Any] = []
+    degraded: list[str] = []

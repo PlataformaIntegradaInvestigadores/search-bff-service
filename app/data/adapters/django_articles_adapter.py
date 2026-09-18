@@ -1,13 +1,13 @@
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from app.core.config import settings
 from app.core.cache import (
-    articles_cache,
-    articles_by_author_cache,
     article_detail_cache,
+    articles_by_author_cache,
+    articles_cache,
     make_key,
 )
+from app.core.config import settings
 from app.core.resilience import resilient_get, resilient_post
 from app.domain.article_repositories import IArticleRepository
 
@@ -22,8 +22,8 @@ class DjangoArticlesAdapter(IArticleRepository):
         query: str,
         page: int,
         page_size: int,
-        years: Optional[List[int]] = None,
-    ) -> Dict[str, Any]:
+        years: list[int] | None = None,
+    ) -> dict[str, Any]:
         years_key = str(sorted(years)) if years else "none"
         cache_key = make_key("articles_relevant", query, page, page_size, years_key)
 
@@ -34,7 +34,7 @@ class DjangoArticlesAdapter(IArticleRepository):
 
         logger.info(f"[CACHE MISS] articles_relevant | key={cache_key}")
 
-        payload: Dict[str, Any] = {
+        payload: dict[str, Any] = {
             "query": query,
             "page": page,
             "size": page_size,
@@ -51,7 +51,7 @@ class DjangoArticlesAdapter(IArticleRepository):
         articles_cache[cache_key] = data
         return data
 
-    async def find_articles_by_author(self, author_id: str) -> List[Dict[str, Any]]:
+    async def find_articles_by_author(self, author_id: str) -> list[dict[str, Any]]:
         cache_key = make_key("articles_by_author", author_id)
 
         cached = articles_by_author_cache.get(cache_key)
@@ -63,14 +63,16 @@ class DjangoArticlesAdapter(IArticleRepository):
 
         params = {"author_id": author_id}
 
-        response = await resilient_get(settings.V1_ARTICLES_BY_AUTHOR_URL, params=params)
+        response = await resilient_get(
+            settings.V1_ARTICLES_BY_AUTHOR_URL, params=params
+        )
         response.raise_for_status()
         data = response.json()
 
         articles_by_author_cache[cache_key] = data
         return data
 
-    async def get_article_by_id(self, scopus_id: str) -> Dict[str, Any]:
+    async def get_article_by_id(self, scopus_id: str) -> dict[str, Any]:
         cache_key = make_key("article_detail", scopus_id)
 
         cached = article_detail_cache.get(cache_key)
