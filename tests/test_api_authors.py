@@ -100,7 +100,12 @@ class TestSearchAuthorsPost:
         assert r.status_code == 200
         body = r.json()
         assert body["total"] == 1
-        assert body["next_page"] is not None
+        # next_page debe apuntar al prefijo publico del gateway (/api/search/v2/...),
+        # no al prefijo interno con el que FastAPI monta sus rutas (/api-se/v2/...).
+        assert body["next_page"].endswith(
+            "/api/search/v2/authors/search?query=machine+learning&page=2&page_size=10"
+        )
+        assert "/api-se/" not in body["next_page"]
 
     def test_bridge_caido_retorna_503(self):
         mock_use_case = AsyncMock()
@@ -298,6 +303,6 @@ class TestBuildPageUrl:
         mock_request = MagicMock()
         mock_request.base_url = "http://testserver/"
         url = build_page_url(mock_request, "machine learning", 2, 10)
-        assert url.startswith("http://testserver/api-se/v2/authors/search?")
+        assert url.startswith("http://testserver/api/search/v2/authors/search?")
         assert "page=2" in url
         assert "page_size=10" in url
