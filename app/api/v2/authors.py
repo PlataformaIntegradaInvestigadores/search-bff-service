@@ -38,7 +38,9 @@ def get_search_use_case() -> AuthorsSearchUseCase:
 
 def build_page_url(http_request: Request, query: str, page: int, page_size: int) -> str:
     base_url = str(http_request.base_url).rstrip("/")
-    next_path = "/api-se/v2/authors/search"
+    # El gateway (nginx.conf: /api/search/v2/ -> /api-se/v2/) es la URL publica;
+    # el navegador nunca ve /api-se/, asi que next_page debe apuntar a ella.
+    next_path = "/api/search/v2/authors/search"
     params = urlencode({"query": query, "page": page, "page_size": page_size})
     return f"{base_url}{next_path}?{params}"
 
