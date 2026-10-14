@@ -4,12 +4,10 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     V1_SEARCH_URL: str = "http://localhost:8001/api-se/v1/llm-search/semantic-search/"
     V1_AUTHORS_URL: str = (
-        "http://localhost:8001/api-se/v1/authors/authors/most_relevant_authors/"
+        "http://localhost:8001/api-se/v1/authors/most_relevant_authors/"
     )
-    V1_AUTHORS_FIND_URL: str = (
-        "http://localhost:8001/api-se/v1/authors/authors/find_by_query/"
-    )
-    V1_AUTHORS_DETAIL_URL: str = "http://localhost:8001/api-se/v1/authors/authors/"
+    V1_AUTHORS_FIND_URL: str = "http://localhost:8001/api-se/v1/authors/find_by_query/"
+    V1_AUTHORS_DETAIL_URL: str = "http://localhost:8001/api-se/v1/authors/"
     V1_ARTICLES_RELEVANT_URL: str = (
         "http://localhost:8001/api-se/v1/articles/most-relevant-articles-by-topic/"
     )
