@@ -121,7 +121,7 @@ class DjangoAuthorsAdapter(IAuthorRepository):
         logger.info(f"[CACHE MISS] author_coauthors | key={cache_key}")
 
         base = settings.BASE_URL.rstrip("/")
-        url = f"{base}/api-se/v1/coauthors/coauthors/{scopus_id}/coauthors_by_id/"
+        url = f"{base}/api-se/v1/coauthors/{scopus_id}/coauthors_by_id/"
         response = await resilient_get(url)
         response.raise_for_status()
         data = response.json()
