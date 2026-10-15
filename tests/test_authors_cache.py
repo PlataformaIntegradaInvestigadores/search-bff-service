@@ -34,6 +34,25 @@ def _clear_caches():
         c.clear()
 
 
+class TestCoauthorsUrl:
+    def test_get_coauthors_pega_a_la_ruta_registrada_sin_segmento_duplicado(self):
+        # Regresion: la URL tenia "coauthors/coauthors/" duplicado (el
+        # prefijo del router "coauthors/" montado en root_urls.py mas otro
+        # "coauthors/" agregado a mano aca), asi que siempre pegaba 404 y
+        # get_coauthors() se degradaba en silencio a coauthors: null en
+        # cada author_profile -- el frontend se colgaba en el spinner de
+        # carga (ver coauthors-graph.component.ts) sin ningun error visible.
+        adapter = DjangoAuthorsAdapter()
+        mock_get = AsyncMock(return_value=_fake_response({"data": {"nodes": [], "links": []}}))
+        with patch(
+            "app.data.adapters.django_authors_adapter.resilient_get", new=mock_get
+        ):
+            asyncio.run(adapter.get_coauthors("57193901649"))
+
+        called_url = mock_get.await_args.args[0]
+        assert called_url == "http://localhost:8001/api-se/v1/coauthors/57193901649/coauthors_by_id/"
+
+
 class TestCacheSubseccionesPerfil:
     def test_coauthors_segunda_llamada_es_hit(self):
         adapter = DjangoAuthorsAdapter()
