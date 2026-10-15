@@ -1,3 +1,4 @@
+import logging
 import uuid
 from contextlib import asynccontextmanager
 
@@ -11,6 +12,12 @@ from app.api.v2 import articles, authors, search
 from app.core.exceptions import validation_exception_handler
 from app.core.http_client import http_client
 from app.schemas.search import ERROR_RESPONSES
+
+# INFO para ver CACHE HIT/MISS y el fallback TF-IDF → semantic en docker logs.
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s:%(name)s:%(message)s",
+)
 
 
 @asynccontextmanager

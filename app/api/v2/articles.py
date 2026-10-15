@@ -76,6 +76,7 @@ async def relevant_articles(request: RelevantArticlesRequest):
                 publication_date=item.get("publication_date", ""),
                 scopus_id=str(item.get("scopus_id", "")),
                 relevance=float(item.get("relevance", 0.0)),
+                abstract=item.get("abstract") or None,
                 authors=item.get("authors"),
                 affiliations=item.get("affiliations"),
             )

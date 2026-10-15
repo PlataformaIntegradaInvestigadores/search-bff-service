@@ -19,6 +19,7 @@ class RelevantArticleItem(BaseModel):
     publication_date: str
     scopus_id: str
     relevance: float
+    abstract: str | None = None
     authors: list[str] | None = None
     affiliations: list[str] | None = None
 
