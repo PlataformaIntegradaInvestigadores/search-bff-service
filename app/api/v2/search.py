@@ -21,14 +21,20 @@ from app.core.config import settings
 from app.core.resilience import resilient_get
 from app.data.adapters.django_adapter import DjangoSearchAdapter
 from app.schemas.search import (
+    BAD_REQUEST,
+    CONTRACT_ERROR,
+    INTERNAL_ERROR,
+    UNAVAILABLE,
     ArticleResult,
+    CacheStatsResponse,
     ErrorDetail,
     ErrorResponse,
+    FiltersResponse,
     SearchRequest,
     SearchResponse,
 )
 
-router = APIRouter(tags=["Search"])
+router = APIRouter(tags=["Búsqueda"])
 health_router = APIRouter(tags=["Health"])
 logger = logging.getLogger(__name__)
 
@@ -37,8 +43,15 @@ def get_use_case() -> SemanticSearchUseCase:
     return SemanticSearchUseCase(repository=DjangoSearchAdapter())
 
 
-@router.post("/search", response_model=SearchResponse)
+@router.post(
+    "/search",
+    response_model=SearchResponse,
+    summary="Búsqueda semántica de artículos",
+    responses={**BAD_REQUEST, **CONTRACT_ERROR, **UNAVAILABLE, **INTERNAL_ERROR},
+)
 async def semantic_search(request: SearchRequest):
+    """Busca artículos por significado y no solo por palabras exactas. Devuelve los
+    resultados paginados, ordenados por relevancia, y los años presentes en ellos."""
     trace_id = str(uuid.uuid4())
 
     if not request.query or not request.query.strip():
@@ -104,8 +117,15 @@ async def semantic_search(request: SearchRequest):
         )
 
 
-@router.get("/search/filters")
+@router.get(
+    "/search/filters",
+    response_model=FiltersResponse,
+    summary="Años disponibles como filtro",
+)
 async def get_filters():
+    """Devuelve los años que realmente tienen artículos, para ofrecerlos como filtro
+    de la búsqueda. El resultado se guarda en caché; si el servicio de búsqueda no
+    responde se devuelve una lista fija en lugar de fallar."""
     # Slice 3-A: facetas de anio DINAMICAS. v2 calcula los anios realmente presentes
     # en los datos (via v1 get_last_years) en vez de una lista estatica que ofrecia
     # anios sin articulos (p.ej. 2018). Cacheado; con fallback estatico si v1 no
@@ -180,8 +200,16 @@ async def health():
     return JSONResponse(status_code=503, content=payload)
 
 
-@router.get("/cache/stats")
+@router.get(
+    "/cache/stats",
+    response_model=CacheStatsResponse,
+    tags=["Operación"],
+    summary="Estadísticas de la caché",
+)
 async def cache_stats():
+    """Muestra el tamaño, la vida y los aciertos de cada caché del servicio. Es un
+    endpoint de diagnóstico: el frontend no lo usa."""
+
     def get_stats(cache_instance):
         return {
             "current_size": len(cache_instance),
