@@ -144,7 +144,9 @@ async def relevant_articles(request: RelevantArticlesRequest):
         return JSONResponse(
             status_code=500,
             content=ErrorResponse(
-                error=ErrorDetail(code="INTERNAL_ERROR", message=str(e)),
+                error=ErrorDetail(
+                    code="INTERNAL_ERROR", message="Error interno inesperado."
+                ),
                 trace_id=trace_id,
             ).model_dump(),
         )
@@ -224,7 +226,9 @@ async def articles_by_author(
         return JSONResponse(
             status_code=500,
             content=ErrorResponse(
-                error=ErrorDetail(code="INTERNAL_ERROR", message=str(e)),
+                error=ErrorDetail(
+                    code="INTERNAL_ERROR", message="Error interno inesperado."
+                ),
                 trace_id=trace_id,
             ).model_dump(),
         )
@@ -349,7 +353,9 @@ async def article_detail(
         return JSONResponse(
             status_code=500,
             content=ErrorResponse(
-                error=ErrorDetail(code="INTERNAL_ERROR", message=str(e)),
+                error=ErrorDetail(
+                    code="INTERNAL_ERROR", message="Error interno inesperado."
+                ),
                 trace_id=trace_id,
             ).model_dump(),
         )

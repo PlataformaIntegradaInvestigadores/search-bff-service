@@ -187,7 +187,9 @@ async def relevant_authors(request: AuthorsRequest):
         return JSONResponse(
             status_code=500,
             content=ErrorResponse(
-                error=ErrorDetail(code="INTERNAL_ERROR", message=str(e)),
+                error=ErrorDetail(
+                    code="INTERNAL_ERROR", message="Error interno inesperado."
+                ),
                 trace_id=trace_id,
             ).model_dump(),
         )
@@ -264,7 +266,9 @@ async def search_authors(payload: AuthorsSearchRequest, http_request: Request):
         return JSONResponse(
             status_code=500,
             content=ErrorResponse(
-                error=ErrorDetail(code="INTERNAL_ERROR", message=str(e)),
+                error=ErrorDetail(
+                    code="INTERNAL_ERROR", message="Error interno inesperado."
+                ),
                 trace_id=trace_id,
             ).model_dump(),
         )
@@ -282,7 +286,9 @@ async def search_authors_get(
     page_size: int = Query(10, description="Resultados por página."),
     http_request: Request = None,
 ):
-    """Igual que `POST /authors/search`, pero con los datos en la URL."""
+    """Igual que `POST /authors/search`, pero con los datos en la URL. Es la ruta a
+    la que apuntan `next_page` y `previous_page` en las respuestas de la búsqueda, y
+    por eso se conserva."""
     trace_id = str(uuid.uuid4())
 
     if not query or not query.strip():
@@ -340,7 +346,9 @@ async def search_authors_get(
         return JSONResponse(
             status_code=500,
             content=ErrorResponse(
-                error=ErrorDetail(code="INTERNAL_ERROR", message=str(e)),
+                error=ErrorDetail(
+                    code="INTERNAL_ERROR", message="Error interno inesperado."
+                ),
                 trace_id=trace_id,
             ).model_dump(),
         )
@@ -417,7 +425,9 @@ async def get_author_profile(
         return JSONResponse(
             status_code=500,
             content=ErrorResponse(
-                error=ErrorDetail(code="INTERNAL_ERROR", message=str(e)),
+                error=ErrorDetail(
+                    code="INTERNAL_ERROR", message="Error interno inesperado."
+                ),
                 trace_id=trace_id,
             ).model_dump(),
         )
@@ -486,7 +496,9 @@ async def get_author(scopus_id: str = Path(..., description="ID del autor en Sco
         return JSONResponse(
             status_code=500,
             content=ErrorResponse(
-                error=ErrorDetail(code="INTERNAL_ERROR", message=str(e)),
+                error=ErrorDetail(
+                    code="INTERNAL_ERROR", message="Error interno inesperado."
+                ),
                 trace_id=trace_id,
             ).model_dump(),
         )

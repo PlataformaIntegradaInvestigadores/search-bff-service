@@ -111,7 +111,9 @@ async def semantic_search(request: SearchRequest):
         return JSONResponse(
             status_code=500,
             content=ErrorResponse(
-                error=ErrorDetail(code="INTERNAL_ERROR", message=str(e)),
+                error=ErrorDetail(
+                    code="INTERNAL_ERROR", message="Error interno inesperado."
+                ),
                 trace_id=trace_id,
             ).model_dump(),
         )
