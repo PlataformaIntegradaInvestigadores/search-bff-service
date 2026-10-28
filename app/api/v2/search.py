@@ -36,6 +36,7 @@ from app.schemas.search import (
 
 router = APIRouter(tags=["Búsqueda"])
 health_router = APIRouter(tags=["Health"])
+ops_router = APIRouter(tags=["Operación"])
 logger = logging.getLogger(__name__)
 
 
@@ -202,10 +203,9 @@ async def health():
     return JSONResponse(status_code=503, content=payload)
 
 
-@router.get(
+@ops_router.get(
     "/cache/stats",
     response_model=CacheStatsResponse,
-    tags=["Operación"],
     summary="Estadísticas de la caché",
 )
 async def cache_stats():

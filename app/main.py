@@ -36,7 +36,10 @@ Todos los errores usan el mismo formato: `{"error": {"code", "message", "details
 "trace_id"}`. El `trace_id` también viaja en la cabecera `X-Trace-ID`.
 
 * `400`: la petición es inválida o falta un campo obligatorio.
+* `404`: el recurso pedido no existe (solo en el detalle de un artículo).
 * `422`: la consulta incumple una regla del contrato.
+* `500`: error interno inesperado; el mensaje es genérico y el `trace_id` permite
+  encontrar la causa en los logs.
 * `503`: el servicio de búsqueda (v1) no está disponible.
 
 Detrás del gateway todas las rutas cuelgan de `/api/search/v2`.
@@ -96,6 +99,7 @@ async def trace_id_middleware(request: Request, call_next):
 
 app.include_router(search.health_router)
 app.include_router(search.router, prefix="/api-se/v2")
+app.include_router(search.ops_router, prefix="/api-se/v2")
 app.include_router(authors.router, prefix="/api-se/v2")
 app.include_router(articles.router, prefix="/api-se/v2")
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
@@ -122,6 +126,8 @@ def _localize(schema: dict) -> None:
             for response in responses.values():
                 text = response.get("description")
                 response["description"] = _DEFAULT_RESPONSE_TEXT.get(text, text)
+                for media in response.get("content", {}).values():
+                    media.get("schema", {}).pop("title", None)
             for parameter in operation.get("parameters", []):
                 parameter.get("schema", {}).pop("title", None)
     schemas = schema.get("components", {}).get("schemas", {})

@@ -9,7 +9,10 @@ class AuthorsFilters(BaseModel):
     )
     mode: str | None = Field(
         default=None,
-        description="Modo de relación entre los filtros de afiliación.",
+        description="Cómo se aplica `affiliations`: con `include` quedan solo los "
+        "autores de esas afiliaciones; con cualquier otro valor (por ejemplo "
+        "`exclude`) se descartan.",
+        examples=["include"],
     )
 
 
@@ -113,8 +116,9 @@ class AuthorsSearchResponse(BaseModel):
 
 
 class AuthorProfileResponse(BaseModel):
-    """Respuesta compuesta del perfil de autor (Slice 2). 'author' es el nucleo
-    tipado; el resto se pasa tal cual viene de v1 (tolerante a su forma)."""
+    """Perfil de un autor armado en una sola respuesta. `author` es la parte
+    tipada; el resto se entrega tal como lo devuelve el servicio de búsqueda (v1),
+    por lo que su estructura interna puede variar."""
 
     author: AuthorNode = Field(..., description="Datos principales del autor.")
     topics: list[Any] = Field(
