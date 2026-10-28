@@ -282,8 +282,10 @@ async def search_authors(payload: AuthorsSearchRequest, http_request: Request):
 )
 async def search_authors_get(
     query: str = Query(..., description="Nombre o parte del nombre del autor."),
-    page: int = Query(1, description="Número de página, desde 1."),
-    page_size: int = Query(10, description="Resultados por página."),
+    page: int = Query(1, ge=1, description="Número de página, desde 1."),
+    page_size: int = Query(
+        10, ge=1, le=100, description="Resultados por página (máximo 100)."
+    ),
     http_request: Request = None,
 ):
     """Igual que `POST /authors/search`, pero con los datos en la URL. Es la ruta a
