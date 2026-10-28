@@ -26,15 +26,23 @@ class RelevantArticlesRequest(BaseModel):
 
 
 class RelevantArticleItem(BaseModel):
-    title: str
-    author_count: int
-    affiliation_count: int
-    publication_date: str
-    scopus_id: str
-    relevance: float
-    abstract: str | None = None
-    authors: list[str] | None = None
-    affiliations: list[str] | None = None
+    title: str = Field(..., description="Título del artículo.")
+    author_count: int = Field(..., description="Cantidad de autores.")
+    affiliation_count: int = Field(..., description="Cantidad de afiliaciones.")
+    publication_date: str = Field(..., description="Fecha de publicación.")
+    scopus_id: str = Field(..., description="ID del artículo en Scopus.")
+    relevance: float = Field(
+        ..., description="Puntaje de relevancia respecto a la consulta."
+    )
+    abstract: str | None = Field(
+        default=None, description="Resumen del artículo, si está disponible."
+    )
+    authors: list[str] | None = Field(
+        default=None, description="Nombres de los autores."
+    )
+    affiliations: list[str] | None = Field(
+        default=None, description="Afiliaciones de los autores."
+    )
 
 
 class RelevantArticlesResponse(BaseModel):
