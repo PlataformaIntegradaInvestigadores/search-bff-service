@@ -306,3 +306,34 @@ class TestBuildPageUrl:
         assert url.startswith("http://testserver/api/search/v2/authors/search?")
         assert "page=2" in url
         assert "page_size=10" in url
+
+
+class TestSearchAuthorsGetLimits:
+    """El GET aplica los mismos límites que el POST."""
+
+    def test_page_must_be_at_least_one(self):
+        r = client.get("/api-se/v2/authors/search", params={"query": "ml", "page": 0})
+        assert r.status_code == 400
+        assert r.json()["error"]["code"] == "INVALID_INPUT"
+
+    def test_page_size_has_an_upper_bound(self):
+        r = client.get(
+            "/api-se/v2/authors/search", params={"query": "ml", "page_size": 101}
+        )
+        assert r.status_code == 400
+
+    def test_page_size_must_be_positive(self):
+        r = client.get(
+            "/api-se/v2/authors/search", params={"query": "ml", "page_size": 0}
+        )
+        assert r.status_code == 400
+
+    def test_limits_are_accepted(self):
+        use_case = AsyncMock()
+        use_case.execute.return_value = {"total": 0, "data": []}
+        with patch("app.api.v2.authors.get_search_use_case", return_value=use_case):
+            r = client.get(
+                "/api-se/v2/authors/search",
+                params={"query": "ml", "page": 1, "page_size": 100},
+            )
+        assert r.status_code == 200
