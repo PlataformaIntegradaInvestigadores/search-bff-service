@@ -3,7 +3,7 @@ import uuid
 from urllib.parse import urlencode
 
 import httpx
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Path, Query, Request
 from fastapi.responses import JSONResponse
 
 from app.api.v2._validation import validate_query
@@ -22,9 +22,16 @@ from app.schemas.authors import (
     AuthorsSearchResponse,
     RelevantAuthorsResponse,
 )
-from app.schemas.search import ErrorDetail, ErrorResponse
+from app.schemas.search import (
+    BAD_REQUEST,
+    CONTRACT_ERROR,
+    INTERNAL_ERROR,
+    UNAVAILABLE,
+    ErrorDetail,
+    ErrorResponse,
+)
 
-router = APIRouter(tags=["Authors"])
+router = APIRouter(tags=["Autores"])
 logger = logging.getLogger(__name__)
 
 
@@ -97,8 +104,16 @@ def get_profile_use_case() -> AuthorProfileUseCase:
     )
 
 
-@router.post("/authors/relevant", response_model=RelevantAuthorsResponse)
+@router.post(
+    "/authors/relevant",
+    response_model=RelevantAuthorsResponse,
+    summary="Autores relevantes para una consulta",
+    responses={**BAD_REQUEST, **CONTRACT_ERROR, **UNAVAILABLE, **INTERNAL_ERROR},
+)
 async def relevant_authors(request: AuthorsRequest):
+    """Devuelve los autores más relevantes para una consulta como una red: `nodes`
+    son los autores, `links` sus colaboraciones y `affiliations` las instituciones
+    presentes. Admite filtrar por afiliación."""
     trace_id = str(uuid.uuid4())
 
     if not request.query or not request.query.strip():
@@ -172,14 +187,23 @@ async def relevant_authors(request: AuthorsRequest):
         return JSONResponse(
             status_code=500,
             content=ErrorResponse(
-                error=ErrorDetail(code="INTERNAL_ERROR", message=str(e)),
+                error=ErrorDetail(
+                    code="INTERNAL_ERROR", message="Error interno inesperado."
+                ),
                 trace_id=trace_id,
             ).model_dump(),
         )
 
 
-@router.post("/authors/search", response_model=AuthorsSearchResponse)
+@router.post(
+    "/authors/search",
+    response_model=AuthorsSearchResponse,
+    summary="Buscar autores por nombre",
+    responses={**BAD_REQUEST, **CONTRACT_ERROR, **UNAVAILABLE, **INTERNAL_ERROR},
+)
 async def search_authors(payload: AuthorsSearchRequest, http_request: Request):
+    """Busca autores por nombre. La respuesta incluye `next_page` y `previous_page`
+    para recorrer los resultados."""
     trace_id = str(uuid.uuid4())
 
     if not payload.query or not payload.query.strip():
@@ -242,16 +266,29 @@ async def search_authors(payload: AuthorsSearchRequest, http_request: Request):
         return JSONResponse(
             status_code=500,
             content=ErrorResponse(
-                error=ErrorDetail(code="INTERNAL_ERROR", message=str(e)),
+                error=ErrorDetail(
+                    code="INTERNAL_ERROR", message="Error interno inesperado."
+                ),
                 trace_id=trace_id,
             ).model_dump(),
         )
 
 
-@router.get("/authors/search", response_model=AuthorsSearchResponse)
+@router.get(
+    "/authors/search",
+    response_model=AuthorsSearchResponse,
+    summary="Buscar autores por nombre (GET)",
+    responses={**BAD_REQUEST, **UNAVAILABLE, **INTERNAL_ERROR},
+)
 async def search_authors_get(
-    query: str, page: int = 1, page_size: int = 10, http_request: Request = None
+    query: str = Query(..., description="Nombre o parte del nombre del autor."),
+    page: int = Query(1, description="Número de página, desde 1."),
+    page_size: int = Query(10, description="Resultados por página."),
+    http_request: Request = None,
 ):
+    """Igual que `POST /authors/search`, pero con los datos en la URL. Es la ruta a
+    la que apuntan `next_page` y `previous_page` en las respuestas de la búsqueda, y
+    por eso se conserva."""
     trace_id = str(uuid.uuid4())
 
     if not query or not query.strip():
@@ -309,14 +346,29 @@ async def search_authors_get(
         return JSONResponse(
             status_code=500,
             content=ErrorResponse(
-                error=ErrorDetail(code="INTERNAL_ERROR", message=str(e)),
+                error=ErrorDetail(
+                    code="INTERNAL_ERROR", message="Error interno inesperado."
+                ),
                 trace_id=trace_id,
             ).model_dump(),
         )
 
 
-@router.get("/authors/{scopus_id}/profile", response_model=AuthorProfileResponse)
-async def get_author_profile(scopus_id: str):
+@router.get(
+    "/authors/{scopus_id}/profile",
+    response_model=AuthorProfileResponse,
+    summary="Perfil completo de un autor",
+    description=(
+        "Compone en una sola respuesta el perfil de un autor: sus datos "
+        "principales (`author`), tópicos, red de coautores, publicaciones por año "
+        "y artículos. Si alguna sección no se puede obtener, la respuesta sigue "
+        "siendo válida y esa sección queda vacía y listada en `degraded`."
+    ),
+    responses={**BAD_REQUEST, **UNAVAILABLE, **INTERNAL_ERROR},
+)
+async def get_author_profile(
+    scopus_id: str = Path(..., description="ID del autor en Scopus."),
+):
     """Slice 2 (API Composition): perfil de autor compuesto en una sola respuesta.
     v2 orquesta concurrentemente detalle + topics + coautores + anios + articulos
     desde v1, eliminando las llamadas directas frontend -> v1."""
@@ -373,14 +425,23 @@ async def get_author_profile(scopus_id: str):
         return JSONResponse(
             status_code=500,
             content=ErrorResponse(
-                error=ErrorDetail(code="INTERNAL_ERROR", message=str(e)),
+                error=ErrorDetail(
+                    code="INTERNAL_ERROR", message="Error interno inesperado."
+                ),
                 trace_id=trace_id,
             ).model_dump(),
         )
 
 
-@router.get("/authors/{scopus_id}", response_model=AuthorNode)
-async def get_author(scopus_id: str):
+@router.get(
+    "/authors/{scopus_id}",
+    response_model=AuthorNode,
+    summary="Datos de un autor",
+    responses={**BAD_REQUEST, **UNAVAILABLE, **INTERNAL_ERROR},
+)
+async def get_author(scopus_id: str = Path(..., description="ID del autor en Scopus.")):
+    """Devuelve los datos principales de un autor: nombre, afiliaciones, tópicos,
+    coautores y citas."""
     trace_id = str(uuid.uuid4())
 
     if not scopus_id.strip():
@@ -435,7 +496,9 @@ async def get_author(scopus_id: str):
         return JSONResponse(
             status_code=500,
             content=ErrorResponse(
-                error=ErrorDetail(code="INTERNAL_ERROR", message=str(e)),
+                error=ErrorDetail(
+                    code="INTERNAL_ERROR", message="Error interno inesperado."
+                ),
                 trace_id=trace_id,
             ).model_dump(),
         )

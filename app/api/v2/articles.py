@@ -2,7 +2,7 @@ import logging
 import uuid
 
 import httpx
-from fastapi import APIRouter
+from fastapi import APIRouter, Path, Query
 from fastapi.responses import JSONResponse
 
 from app.api.v2._validation import validate_query
@@ -19,9 +19,17 @@ from app.schemas.articles import (
     RelevantArticlesRequest,
     RelevantArticlesResponse,
 )
-from app.schemas.search import ErrorDetail, ErrorResponse
+from app.schemas.search import (
+    BAD_REQUEST,
+    CONTRACT_ERROR,
+    INTERNAL_ERROR,
+    NOT_FOUND,
+    UNAVAILABLE,
+    ErrorDetail,
+    ErrorResponse,
+)
 
-router = APIRouter(tags=["Articles"])
+router = APIRouter(tags=["Artículos"])
 logger = logging.getLogger(__name__)
 
 
@@ -37,8 +45,15 @@ def get_detail_use_case() -> ArticleDetailUseCase:
     return ArticleDetailUseCase(repository=DjangoArticlesAdapter())
 
 
-@router.post("/articles/relevant", response_model=RelevantArticlesResponse)
+@router.post(
+    "/articles/relevant",
+    response_model=RelevantArticlesResponse,
+    summary="Artículos relevantes para una consulta",
+    responses={**BAD_REQUEST, **CONTRACT_ERROR, **UNAVAILABLE, **INTERNAL_ERROR},
+)
 async def relevant_articles(request: RelevantArticlesRequest):
+    """Devuelve los artículos más relevantes para una consulta, con sus autores y
+    afiliaciones. Admite filtrar por año y paginar."""
     trace_id = str(uuid.uuid4())
 
     if not request.query or not request.query.strip():
@@ -129,14 +144,24 @@ async def relevant_articles(request: RelevantArticlesRequest):
         return JSONResponse(
             status_code=500,
             content=ErrorResponse(
-                error=ErrorDetail(code="INTERNAL_ERROR", message=str(e)),
+                error=ErrorDetail(
+                    code="INTERNAL_ERROR", message="Error interno inesperado."
+                ),
                 trace_id=trace_id,
             ).model_dump(),
         )
 
 
-@router.get("/articles/by-author", response_model=list[ArticlesByAuthorItem])
-async def articles_by_author(author_id: str):
+@router.get(
+    "/articles/by-author",
+    response_model=list[ArticlesByAuthorItem],
+    summary="Artículos de un autor",
+    responses={**BAD_REQUEST, **UNAVAILABLE, **INTERNAL_ERROR},
+)
+async def articles_by_author(
+    author_id: str = Query(..., description="ID del autor en Scopus."),
+):
+    """Lista los artículos publicados por un autor."""
     trace_id = str(uuid.uuid4())
 
     if not author_id or not author_id.strip():
@@ -201,7 +226,9 @@ async def articles_by_author(author_id: str):
         return JSONResponse(
             status_code=500,
             content=ErrorResponse(
-                error=ErrorDetail(code="INTERNAL_ERROR", message=str(e)),
+                error=ErrorDetail(
+                    code="INTERNAL_ERROR", message="Error interno inesperado."
+                ),
                 trace_id=trace_id,
             ).model_dump(),
         )
@@ -210,9 +237,14 @@ async def articles_by_author(author_id: str):
 @router.get(
     "/articles/{scopus_id}",
     response_model=ArticleDetailResponse,
-    responses={404: {"model": ErrorResponse, "description": "Articulo no encontrado"}},
+    summary="Detalle de un artículo",
+    responses={**BAD_REQUEST, **NOT_FOUND, **UNAVAILABLE, **INTERNAL_ERROR},
 )
-async def article_detail(scopus_id: str):
+async def article_detail(
+    scopus_id: str = Path(..., description="ID del artículo en Scopus."),
+):
+    """Devuelve el artículo completo: resumen, DOI, autores, afiliaciones y
+    tópicos. Responde 404 si no existe."""
     trace_id = str(uuid.uuid4())
 
     def ensure_str(value) -> str:
@@ -321,7 +353,9 @@ async def article_detail(scopus_id: str):
         return JSONResponse(
             status_code=500,
             content=ErrorResponse(
-                error=ErrorDetail(code="INTERNAL_ERROR", message=str(e)),
+                error=ErrorDetail(
+                    code="INTERNAL_ERROR", message="Error interno inesperado."
+                ),
                 trace_id=trace_id,
             ).model_dump(),
         )
