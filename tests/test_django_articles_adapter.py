@@ -3,6 +3,7 @@
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import httpx
 import pytest
 
 from app.core.cache import (
@@ -119,6 +120,64 @@ class TestMostRelevantArticles:
         assert result["total"] == 1
         assert result["data"][0]["scopus_id"] == "MOCK-ART-7"
         assert result["data"][0]["abstract"] == "math IR abstract"
+
+    def test_fallback_a_semantic_cuando_tfidf_falla_con_5xx(self):
+        adapter = DjangoArticlesAdapter()
+        semantic_item = {
+            "title": "Hybrid Search",
+            "publication_date": "2023-02-14",
+            "scopus_id": "MOCK-ART-7",
+            "relevance": 0.8,
+        }
+
+        async def _side_effect(url, *args, **kwargs):
+            if "most-relevant" in str(url):
+                failing = MagicMock()
+                failing.raise_for_status.side_effect = httpx.HTTPStatusError(
+                    "500", request=MagicMock(), response=MagicMock()
+                )
+                return failing
+            return _fake_response({"data": [semantic_item], "years": ["2023"]})
+
+        mock_post = AsyncMock(side_effect=_side_effect)
+        with patch(
+            "app.data.adapters.django_articles_adapter.resilient_post", new=mock_post
+        ):
+            result = asyncio.run(adapter.most_relevant_articles("q", 1, 10))
+
+        assert mock_post.await_count == 2
+        assert result["data"][0]["scopus_id"] == "MOCK-ART-7"
+
+    def test_fallback_semantic_reporta_total_de_todas_las_paginas(self):
+        adapter = DjangoArticlesAdapter()
+        hits = [
+            {"title": f"T{i}", "publication_date": "2024-01-01", "scopus_id": str(i)}
+            for i in range(5)
+        ]
+
+        async def _side_effect(url, *args, **kwargs):
+            if "most-relevant" in str(url):
+                return _fake_response({"data": [], "total": 0})
+            return _fake_response({"data": hits})
+
+        mock_post = AsyncMock(side_effect=_side_effect)
+        with patch(
+            "app.data.adapters.django_articles_adapter.resilient_post", new=mock_post
+        ):
+            result = asyncio.run(adapter.most_relevant_articles("q", 2, 2))
+
+        assert len(result["data"]) == 2
+        assert result["total"] == 5
+        assert result["total_results"] == 5
+
+    def test_si_fallan_tfidf_y_semantic_propaga_el_error(self):
+        adapter = DjangoArticlesAdapter()
+        mock_post = AsyncMock(side_effect=httpx.ConnectError("down"))
+        with patch(
+            "app.data.adapters.django_articles_adapter.resilient_post", new=mock_post
+        ):
+            with pytest.raises(httpx.ConnectError):
+                asyncio.run(adapter.most_relevant_articles("q", 1, 10))
 
 
 class TestFindArticlesByAuthor:
