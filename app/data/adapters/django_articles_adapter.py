@@ -1,6 +1,8 @@
 import logging
 from typing import Any
 
+import httpx
+
 from app.core.cache import (
     article_detail_cache,
     articles_by_author_cache,
@@ -13,6 +15,7 @@ from app.domain.article_repositories import IArticleRepository
 
 logger = logging.getLogger(__name__)
 
+
 def _normalize_relevant_payload(data: dict[str, Any]) -> dict[str, Any]:
     """Ensure the shape expected by RelevantArticlesResponse."""
     items = data.get("data") or []
@@ -23,6 +26,7 @@ def _normalize_relevant_payload(data: dict[str, Any]) -> dict[str, Any]:
         "total": total,
         "total_results": data.get("total_results", total),
     }
+
 
 def _map_semantic_to_relevant(
     semantic: dict[str, Any],
@@ -47,9 +51,7 @@ def _map_semantic_to_relevant(
     for item in page_items:
         authors = item.get("authors") or []
         if authors and isinstance(authors[0], dict):
-            authors = [
-                a.get("name") or a.get("auth_name") or "" for a in authors if a
-            ]
+            authors = [a.get("name") or a.get("auth_name") or "" for a in authors if a]
         affiliations = item.get("affiliations") or []
         if affiliations and isinstance(affiliations[0], dict):
             affiliations = [a.get("name") or "" for a in affiliations if a]
@@ -73,10 +75,11 @@ def _map_semantic_to_relevant(
         {
             "data": mapped,
             "years": years_out,
-            "total": len(mapped),
+            "total": len(items),
             "total_results": len(items),
         }
     )
+
 
 class DjangoArticlesAdapter(IArticleRepository):
     """Bridge temporal al endpoint v1 de articles en Django (ADR-05)."""
@@ -108,15 +111,24 @@ class DjangoArticlesAdapter(IArticleRepository):
             payload["type"] = "include"
             payload["years"] = [str(year) for year in years]
 
-        response = await resilient_post(settings.V1_ARTICLES_RELEVANT_URL, json=payload)
-        response.raise_for_status()
-        data = _normalize_relevant_payload(response.json())
+        try:
+            response = await resilient_post(
+                settings.V1_ARTICLES_RELEVANT_URL, json=payload
+            )
+            response.raise_for_status()
+            data = _normalize_relevant_payload(response.json())
+            fallback_reason = None if data.get("data") else "TF-IDF vacío"
+        except httpx.HTTPError as exc:
+            # El pickle TF-IDF falla (p.ej. traductor externo con rate limit) y
+            # v1 responde 5xx; el resultado semántico sigue siendo útil.
+            data = None
+            fallback_reason = f"TF-IDF falló ({type(exc).__name__})"
 
-        # TF-IDF pickle no incluye artículos mock de Neo4j. Si viene vacío,
-        # degradamos a búsqueda semántica (llm-search) para entornos locales.
-        if not data.get("data"):
+        # TF-IDF pickle no incluye artículos mock de Neo4j. Si viene vacío o
+        # falla, degradamos a búsqueda semántica (llm-search).
+        if fallback_reason:
             logger.info(
-                "[articles_relevant] TF-IDF vacío; fallback a semantic-search"
+                f"[articles_relevant] {fallback_reason}; fallback a semantic-search"
             )
             semantic_payload = {
                 "query": query,
@@ -132,7 +144,6 @@ class DjangoArticlesAdapter(IArticleRepository):
                 page_size=page_size,
                 years=years,
             )
-
 
         articles_cache[cache_key] = data
         return data
