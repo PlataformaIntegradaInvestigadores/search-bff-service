@@ -34,6 +34,9 @@ class RelevantArticleItem(BaseModel):
     relevance: float = Field(
         ..., description="Puntaje de relevancia respecto a la consulta."
     )
+    abstract: str | None = Field(
+        default=None, description="Resumen del artículo, si está disponible."
+    )
     authors: list[str] | None = Field(
         default=None, description="Nombres de los autores."
     )
