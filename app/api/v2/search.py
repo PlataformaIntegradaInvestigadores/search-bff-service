@@ -173,32 +173,62 @@ def _local_ip() -> str:
         return "unknown"
 
 
-@health_router.get("/health", include_in_schema=False)
-async def health():
-    upstream_ok = False
+async def _upstream_health() -> str:
+    """Ask search-service for its own health: "Online", "Degraded" or "Offline".
+
+    The previous probe sent a GET to the POST-only semantic-search route, which
+    answers 405 before touching Neo4j or MongoDB, so a search-service with its
+    databases down still looked healthy. /health/ checks both and answers 503
+    when either fails.
+    """
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
-            response = await client.get(
-                settings.BASE_URL + "/api-se/v1/llm-search/semantic-search/"
-            )
-            upstream_ok = response.status_code < 500
-    except (httpx.ConnectError, httpx.TimeoutException):
-        pass
+            response = await client.get(settings.BASE_URL + "/health/")
+    except httpx.HTTPError:
+        return "Offline"
 
-    service_status = "ok" if upstream_ok else "error"
+    if response.status_code == 200:
+        return "Online"
+
+    if response.status_code == 503:
+        try:
+            if response.json().get("global_status") == "Degraded":
+                return "Degraded"
+        except ValueError:
+            pass
+
+    return "Offline"
+
+
+_HEALTH_GROUP_STATUS = {
+    "Online": "Operativo",
+    "Degraded": "Degradado",
+    "Offline": "Caído",
+}
+
+
+@health_router.get("/health", include_in_schema=False)
+async def health():
+    global_status = await _upstream_health()
+
     payload = {
         "server_name": "search-bff-service",
         "ip_address": _local_ip(),
-        "global_status": "Online" if upstream_ok else "Offline",
+        "global_status": global_status,
         "groups": [
             {
                 "group_name": "Search BFF",
-                "group_status": "Operativo" if upstream_ok else "Caído",
-                "services": [{"name": "search-engine-api", "status": service_status}],
+                "group_status": _HEALTH_GROUP_STATUS[global_status],
+                "services": [
+                    {
+                        "name": "search-engine-api",
+                        "status": "ok" if global_status == "Online" else "error",
+                    }
+                ],
             }
         ],
     }
-    if upstream_ok:
+    if global_status == "Online":
         return payload
     return JSONResponse(status_code=503, content=payload)
 

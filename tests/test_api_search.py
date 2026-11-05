@@ -3,6 +3,7 @@
 from unittest.mock import AsyncMock, patch
 
 import httpx
+import pytest
 from fastapi.testclient import TestClient
 
 from app.core.cache import filters_cache
@@ -136,6 +137,111 @@ class TestHealth:
         with patch("app.api.v2.search.httpx.AsyncClient", return_value=_FakeClient()):
             r = client.get("/health")
         assert r.status_code == 503
+
+
+class _FakeUpstream:
+    """Stands in for httpx.AsyncClient and records the URL that was requested."""
+
+    def __init__(self, response=None, error=None):
+        self.response = response
+        self.error = error
+        self.urls = []
+
+    def __call__(self, *a, **kw):
+        return self
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *a):
+        return False
+
+    async def get(self, url, *a, **kw):
+        self.urls.append(url)
+        if self.error:
+            raise self.error
+        return self.response
+
+
+def _response(status, body=None, json_error=False):
+    from unittest.mock import MagicMock
+
+    resp = MagicMock()
+    resp.status_code = status
+    if json_error:
+        resp.json.side_effect = ValueError("not json")
+    else:
+        resp.json.return_value = body or {}
+    return resp
+
+
+class TestHealthUsesUpstreamHealth:
+    def _get(self, upstream):
+        with patch("app.api.v2.search.httpx.AsyncClient", upstream):
+            return client.get("/health")
+
+    def test_pregunta_al_health_de_search_service_y_no_a_semantic_search(self):
+        upstream = _FakeUpstream(_response(200))
+
+        self._get(upstream)
+
+        assert len(upstream.urls) == 1
+        assert upstream.urls[0].endswith("/health/")
+        assert "semantic-search" not in upstream.urls[0]
+
+    def test_upstream_sano(self):
+        r = self._get(_FakeUpstream(_response(200)))
+
+        assert r.status_code == 200
+        assert r.json()["global_status"] == "Online"
+        assert r.json()["groups"][0]["group_status"] == "Operativo"
+
+    def test_upstream_con_una_base_caida_se_reporta_degradado(self):
+        body = {"global_status": "Degraded"}
+
+        r = self._get(_FakeUpstream(_response(503, body)))
+
+        assert r.status_code == 503
+        payload = r.json()
+        assert payload["global_status"] == "Degraded"
+        assert payload["groups"][0]["group_status"] == "Degradado"
+        assert payload["groups"][0]["services"][0]["status"] == "error"
+
+    def test_upstream_con_las_bases_caidas_se_reporta_caido(self):
+        body = {"global_status": "Offline"}
+
+        r = self._get(_FakeUpstream(_response(503, body)))
+
+        assert r.status_code == 503
+        assert r.json()["global_status"] == "Offline"
+        assert r.json()["groups"][0]["group_status"] == "Caído"
+
+    def test_503_con_cuerpo_ilegible_se_reporta_caido(self):
+        r = self._get(_FakeUpstream(_response(503, json_error=True)))
+
+        assert r.status_code == 503
+        assert r.json()["global_status"] == "Offline"
+
+    @pytest.mark.parametrize("status", [404, 405, 500, 502])
+    def test_otros_codigos_del_upstream_se_reportan_caidos(self, status):
+        r = self._get(_FakeUpstream(_response(status)))
+
+        assert r.status_code == 503
+        assert r.json()["global_status"] == "Offline"
+
+    @pytest.mark.parametrize(
+        "error",
+        [
+            httpx.ConnectError("down"),
+            httpx.ReadTimeout("slow"),
+            httpx.RemoteProtocolError("bad"),
+        ],
+    )
+    def test_errores_de_red_se_reportan_caidos(self, error):
+        r = self._get(_FakeUpstream(error=error))
+
+        assert r.status_code == 503
+        assert r.json()["global_status"] == "Offline"
 
 
 class TestOpenAPI:
