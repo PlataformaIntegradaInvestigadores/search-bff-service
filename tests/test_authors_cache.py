@@ -43,14 +43,19 @@ class TestCoauthorsUrl:
         # cada author_profile -- el frontend se colgaba en el spinner de
         # carga (ver coauthors-graph.component.ts) sin ningun error visible.
         adapter = DjangoAuthorsAdapter()
-        mock_get = AsyncMock(return_value=_fake_response({"data": {"nodes": [], "links": []}}))
+        mock_get = AsyncMock(
+            return_value=_fake_response({"data": {"nodes": [], "links": []}})
+        )
         with patch(
             "app.data.adapters.django_authors_adapter.resilient_get", new=mock_get
         ):
             asyncio.run(adapter.get_coauthors("57193901649"))
 
         called_url = mock_get.await_args.args[0]
-        assert called_url == "http://localhost:8001/api-se/v1/coauthors/57193901649/coauthors_by_id/"
+        assert (
+            called_url
+            == "http://localhost:8001/api-se/v1/coauthors/57193901649/coauthors_by_id/"
+        )
 
 
 class TestCacheSubseccionesPerfil:
